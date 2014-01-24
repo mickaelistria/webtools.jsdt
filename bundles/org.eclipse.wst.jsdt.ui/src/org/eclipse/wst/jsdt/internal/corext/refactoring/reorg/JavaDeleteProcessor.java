@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.reorg;
 
@@ -612,12 +613,12 @@ public final class JavaDeleteProcessor extends DeleteProcessor implements IScrip
 		 	if (fAccessorsDeleted)
 				comment.addSetting(RefactoringCoreMessages.JavaDeleteProcessor_delete_accessors);
 			final JDTRefactoringDescriptor descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.DELETE, project, description, comment.asString(), arguments, flags);
-			arguments.put(ATTRIBUTE_DELETE_SUBPACKAGES, Boolean.valueOf(fDeleteSubPackages).toString());
-			arguments.put(ATTRIBUTE_SUGGEST_ACCESSORS, Boolean.valueOf(fSuggestGetterSetterDeletion).toString());
-			arguments.put(ATTRIBUTE_RESOURCES, new Integer(fResources.length).toString());
+			arguments.put(ATTRIBUTE_DELETE_SUBPACKAGES, Boolean.toString(fDeleteSubPackages));
+			arguments.put(ATTRIBUTE_SUGGEST_ACCESSORS, Boolean.toString(fSuggestGetterSetterDeletion));
+			arguments.put(ATTRIBUTE_RESOURCES, Integer.toString(fResources.length));
 			for (int offset= 0; offset < fResources.length; offset++)
 				arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_ELEMENT + (offset + 1), descriptor.resourceToHandle(fResources[offset]));
-			arguments.put(ATTRIBUTE_ELEMENTS, new Integer(fJavaElements.length).toString());
+			arguments.put(ATTRIBUTE_ELEMENTS, Integer.toString(fJavaElements.length));
 			for (int offset= 0; offset < fJavaElements.length; offset++)
 				arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_ELEMENT + (offset + fResources.length + 1), descriptor.elementToHandle(fJavaElements[offset]));
 			return new DynamicValidationRefactoringChange(descriptor, RefactoringCoreMessages.DeleteRefactoring_7, new Change[] { fDeleteChange});

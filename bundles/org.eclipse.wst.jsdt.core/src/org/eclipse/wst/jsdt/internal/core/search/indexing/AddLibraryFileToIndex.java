@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2012 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istia (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.search.indexing;
 
@@ -131,9 +132,8 @@ class AddLibraryFileToIndex extends IndexRequest {
 	
 						boolean needToReindex = indexedFileNames.elementSize != max; // a new file was added
 						if (!needToReindex) {
-							Object[] valueTable = indexedFileNames.valueTable;
-							for (int i = 0, l = valueTable.length; i < l; i++) {
-								if (valueTable[i] == DELETED) {
+							for (Object value : indexedFileNames.valueTable) {
+								if (DELETED.equals(value)) {
 									needToReindex = true; // a file was deleted so re-index
 									break;
 								}
@@ -175,7 +175,7 @@ class AddLibraryFileToIndex extends IndexRequest {
 					}
 					else if (org.eclipse.wst.jsdt.internal.compiler.util.Util.isArchiveFileName(file.getName())){
 						ZipFile zip = new ZipFile(file);
-						for (Enumeration e = zip.entries(); e.hasMoreElements();) {
+						for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
 							if (this.isCancelled) {
 								if (JobManager.VERBOSE)
 									org.eclipse.wst.jsdt.internal.core.util.Util.verbose("-> indexing of " + zip.getName() + " has been cancelled"); //$NON-NLS-1$ //$NON-NLS-2$
@@ -183,7 +183,7 @@ class AddLibraryFileToIndex extends IndexRequest {
 							}
 	
 							// iterate each entry to index it
-							ZipEntry ze = (ZipEntry) e.nextElement();
+							ZipEntry ze = e.nextElement();
 							if (Util.isClassFileName(ze.getName())) {
 								InputStreamReader inputStreamReader = new InputStreamReader(zip.getInputStream(ze), "utf8"); //$NON-NLS-1$
 								StringBuffer buffer = new StringBuffer();
@@ -238,7 +238,7 @@ class AddLibraryFileToIndex extends IndexRequest {
 	{
 		try {
 			final char[] classFileChars = org.eclipse.wst.jsdt.internal.compiler.util.Util.getFileCharContent(file,null);
-			String packageName="";
+			String packageName=""; //$NON-NLS-1$
 			JavaSearchDocument entryDocument = new JavaSearchDocument(  new Path(file.getAbsolutePath()), classFileChars, participant,packageName);
 			this.manager.indexDocument(entryDocument, participant, index, this.containerPath);
 		} catch (Exception ex)

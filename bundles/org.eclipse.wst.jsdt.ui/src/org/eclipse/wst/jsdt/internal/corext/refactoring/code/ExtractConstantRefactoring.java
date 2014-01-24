@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
 
@@ -122,7 +123,7 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 	private boolean fSelectionAllStaticFinal;
 	private boolean fAllStaticFinalCheckPerformed= false;
 	
-	private List fBodyDeclarations;
+	private List<BodyDeclaration> fBodyDeclarations;
 	
 	//Constant Declaration Location
 	private BodyDeclaration fToInsertAfter;
@@ -181,7 +182,7 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 	
 	public void setVisibility(String am) {
 		Assert.isTrue(
-			am == JdtFlags.VISIBILITY_STRING_PRIVATE || am == JdtFlags.VISIBILITY_STRING_PROTECTED || am == JdtFlags.VISIBILITY_STRING_PACKAGE || am == JdtFlags.VISIBILITY_STRING_PUBLIC
+			JdtFlags.VISIBILITY_STRING_PRIVATE.equals(am) || JdtFlags.VISIBILITY_STRING_PROTECTED.equals(am) || JdtFlags.VISIBILITY_STRING_PACKAGE.equals(am) || JdtFlags.VISIBILITY_STRING_PUBLIC.equals(am)
 		);
 		fVisibility= am;
 	}
@@ -235,8 +236,8 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 		if (fExcludedVariableNames == null) {
 			try {
 				IExpressionFragment expr= getSelectedExpression();
-				Collection takenNames= new ScopeAnalyzer(fCuRewrite.getRoot()).getUsedVariableNames(expr.getStartPosition(), expr.getLength());
-				fExcludedVariableNames= (String[]) takenNames.toArray(new String[takenNames.size()]);
+				Collection<String> takenNames= new ScopeAnalyzer(fCuRewrite.getRoot()).getUsedVariableNames(expr.getStartPosition(), expr.getLength());
+				fExcludedVariableNames= takenNames.toArray(new String[takenNames.size()]);
 			} catch (JavaScriptModelException e) {
 				fExcludedVariableNames= new String[0];
 			}
@@ -515,7 +516,7 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 	}
 
 	public Change createChange(IProgressMonitor monitor) throws CoreException {
-		final Map arguments= new HashMap();
+		final Map<String, Object> arguments= new HashMap<String, Object>();
 		String project= null;
 		IJavaScriptProject javaProject= fCu.getJavaScriptProject();
 		if (javaProject != null)
@@ -546,10 +547,10 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 		final JDTRefactoringDescriptor descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.EXTRACT_CONSTANT, project, description, comment.asString(), arguments, flags);
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fCu));
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_NAME, fConstantName);
-		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
-		arguments.put(ATTRIBUTE_REPLACE, Boolean.valueOf(fReplaceAllOccurrences).toString());
-		arguments.put(ATTRIBUTE_QUALIFY, Boolean.valueOf(fQualifyReferencesWithDeclaringClassName).toString());
-		arguments.put(ATTRIBUTE_VISIBILITY, new Integer(JdtFlags.getVisibilityCode(fVisibility)).toString());
+		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
+		arguments.put(ATTRIBUTE_REPLACE, Boolean.toString(fReplaceAllOccurrences));
+		arguments.put(ATTRIBUTE_QUALIFY, Boolean.toString(fQualifyReferencesWithDeclaringClassName));
+		arguments.put(ATTRIBUTE_VISIBILITY, Integer.toString(JdtFlags.getVisibilityCode(fVisibility)));
 		return new RefactoringDescriptorChange(descriptor, RefactoringCoreMessages.ExtractConstantRefactoring_name, new Change[] { fChange});
 	}
 
@@ -627,8 +628,7 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 		
 		if(bd instanceof FieldDeclaration) {
 			FieldDeclaration fieldDecl = (FieldDeclaration) bd;
-			for(Iterator fragments = fieldDecl.fragments().iterator(); fragments.hasNext();) {
-				VariableDeclarationFragment fragment = (VariableDeclarationFragment) fragments.next();
+			for(VariableDeclarationFragment fragment : (Collection<VariableDeclarationFragment>)fieldDecl.fragments()) {
 				SimpleName staticFieldName = fragment.getName();
 				if(selected.getSubFragmentsMatching(ASTFragmentFactory.createFragmentForFullSubtree(staticFieldName)).length != 0)
 					return true;
@@ -653,7 +653,7 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 		return fToInsertAfter;
 	}
 	
-	private Iterator getBodyDeclarations() throws JavaScriptModelException {
+	private Iterator<BodyDeclaration> getBodyDeclarations() throws JavaScriptModelException {
 		if(fBodyDeclarations == null)
 			fBodyDeclarations= getContainingTypeDeclarationNode().bodyDeclarations();
 		return fBodyDeclarations.iterator();
@@ -687,12 +687,12 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 	 * Elements returned by next() are BodyDeclaration
 	 * instances.
 	 */
-	private Iterator getReplacementScope() throws JavaScriptModelException {
+	private Iterator<BodyDeclaration> getReplacementScope() throws JavaScriptModelException {
 		boolean declPredecessorReached= false;
 		
-		Collection scope= new ArrayList();
-		for(Iterator bodyDeclarations = getBodyDeclarations(); bodyDeclarations.hasNext();) {
-		    BodyDeclaration bodyDeclaration= (BodyDeclaration) bodyDeclarations.next();
+		Collection<BodyDeclaration> scope= new ArrayList<BodyDeclaration>();
+		for(Iterator<BodyDeclaration> bodyDeclarations = getBodyDeclarations(); bodyDeclarations.hasNext();) {
+		    BodyDeclaration bodyDeclaration= bodyDeclarations.next();
 		    
 		    if(bodyDeclaration == getNodeToInsertConstantDeclarationAfter())
 		    	declPredecessorReached= true;
@@ -704,11 +704,11 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 	}
 
 	private IASTFragment[] getFragmentsToReplace() throws JavaScriptModelException {
-		List toReplace = new ArrayList();
+		List<IASTFragment> toReplace = new ArrayList<IASTFragment>();
 		if (fReplaceAllOccurrences) {
-			Iterator replacementScope = getReplacementScope();
+			Iterator<BodyDeclaration> replacementScope = getReplacementScope();
 			while(replacementScope.hasNext()) {
-				BodyDeclaration bodyDecl = (BodyDeclaration) replacementScope.next();
+				BodyDeclaration bodyDecl = replacementScope.next();
 				IASTFragment[] allMatches= ASTFragmentFactory.createFragmentForFullSubtree(bodyDecl).getSubFragmentsMatching(getSelectedExpression());
 				IASTFragment[] replaceableMatches = retainOnlyReplacableMatches(allMatches);
 				for(int i = 0; i < replaceableMatches.length; i++)
@@ -716,17 +716,17 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 			}
 		} else if (canReplace(getSelectedExpression()))
 			toReplace.add(getSelectedExpression());
-		return (IASTFragment[]) toReplace.toArray(new IASTFragment[toReplace.size()]);
+		return toReplace.toArray(new IASTFragment[toReplace.size()]);
 	}
 
 	// !! - like one in ExtractTempRefactoring
 	private static IASTFragment[] retainOnlyReplacableMatches(IASTFragment[] allMatches) {
-		List result= new ArrayList(allMatches.length);
+		List<IASTFragment> result= new ArrayList<IASTFragment>(allMatches.length);
 		for (int i= 0; i < allMatches.length; i++) {
 			if (canReplace(allMatches[i]))
 				result.add(allMatches[i]);
 		}
-		return (IASTFragment[]) result.toArray(new IASTFragment[result.size()]);
+		return result.toArray(new IASTFragment[result.size()]);
 	}
 
 	// !! - like one in ExtractTempRefactoring
@@ -780,9 +780,9 @@ public class ExtractConstantRefactoring extends ScriptableRefactoring {
 				int length= -1;
 				final StringTokenizer tokenizer= new StringTokenizer(selection);
 				if (tokenizer.hasMoreTokens())
-					offset= Integer.valueOf(tokenizer.nextToken()).intValue();
+					offset= Integer.parseInt(tokenizer.nextToken());
 				if (tokenizer.hasMoreTokens())
-					length= Integer.valueOf(tokenizer.nextToken()).intValue();
+					length= Integer.parseInt(tokenizer.nextToken());
 				if (offset >= 0 && length >= 0) {
 					fSelectionStart= offset;
 					fSelectionLength= length;

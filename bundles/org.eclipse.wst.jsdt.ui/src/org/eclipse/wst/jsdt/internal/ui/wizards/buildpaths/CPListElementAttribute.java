@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,16 +7,17 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.wizards.buildpaths;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.wst.jsdt.core.JsGlobalScopeContainerInitializer;
 import org.eclipse.wst.jsdt.core.IIncludePathAttribute;
 import org.eclipse.wst.jsdt.core.IIncludePathEntry;
 import org.eclipse.wst.jsdt.core.IJavaScriptProject;
 import org.eclipse.wst.jsdt.core.JavaScriptCore;
+import org.eclipse.wst.jsdt.core.JsGlobalScopeContainerInitializer;
 import org.eclipse.wst.jsdt.ui.wizards.ClasspathAttributeConfiguration.ClasspathAttributeAccess;
 
 
@@ -115,7 +116,16 @@ public class CPListElementAttribute {
         if (!(obj instanceof CPListElementAttribute))
             return false;
         CPListElementAttribute attrib= (CPListElementAttribute)obj;
-        return attrib.fKey== this.fKey && attrib.getParent().getPath().equals(fParent.getPath());
+        return ( (this.fKey == null && attrib.fKey == null) || (attrib.fKey != null && attrib.fKey.equals(this.fKey)) )
+        		&& attrib.getParent().getPath().equals(fParent.getPath());
+    }
+    
+    @Override
+    public int hashCode() {
+    	int hash = 0;
+    	if (this.fKey != null) hash = this.fKey.hashCode();
+    	hash ^= this.fParent.getPath().hashCode();
+    	return hash;
     }
 
     public CPListElementAttribute copy() {

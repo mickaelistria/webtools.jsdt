@@ -499,7 +499,7 @@ public class SourceProvider {
 	}
 
 	private void rewriteReferences(ASTRewrite rewriter, ITypeBinding[] typeArguments, List typeParameterReferences) {
-		if (typeArguments.length == 0)
+		if (typeArguments == null || typeArguments.length == 0)
 			return;
 		Assert.isTrue(typeArguments.length == typeParameterReferences.size());
 		for (int i= 0; i < typeArguments.length; i++) {

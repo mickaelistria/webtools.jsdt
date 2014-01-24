@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     Alex Blewitt - alex_blewitt@yahoo.com https://bugs.eclipse.org/bugs/show_bug.cgi?id=171066
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -189,7 +190,7 @@ public class SortElementsOperation extends JavaModelOperation {
 				List types = compilationUnit.types();
 				for (Iterator iter = types.iterator(); iter.hasNext();) {
 					AbstractTypeDeclaration typeDeclaration = (AbstractTypeDeclaration) iter.next();
-					typeDeclaration.setProperty(JavaScriptUnitSorter.RELATIVE_ORDER, new Integer(typeDeclaration.getStartPosition()));
+					typeDeclaration.setProperty(JavaScriptUnitSorter.RELATIVE_ORDER, Integer.valueOf(typeDeclaration.getStartPosition()));
 					compilationUnit.setProperty(CONTAINS_MALFORMED_NODES, Boolean.valueOf(isMalformed(typeDeclaration)));
 				}
 				return true;
@@ -199,7 +200,7 @@ public class SortElementsOperation extends JavaModelOperation {
 				List bodyDeclarations = anonymousClassDeclaration.bodyDeclarations();
 				for (Iterator iter = bodyDeclarations.iterator(); iter.hasNext();) {
 					BodyDeclaration bodyDeclaration = (BodyDeclaration) iter.next();
-					bodyDeclaration.setProperty(JavaScriptUnitSorter.RELATIVE_ORDER, new Integer(bodyDeclaration.getStartPosition()));
+					bodyDeclaration.setProperty(JavaScriptUnitSorter.RELATIVE_ORDER, Integer.valueOf(bodyDeclaration.getStartPosition()));
 					anonymousClassDeclaration.setProperty(CONTAINS_MALFORMED_NODES, Boolean.valueOf(isMalformed(bodyDeclaration)));
 				}
 				return true;
@@ -209,7 +210,7 @@ public class SortElementsOperation extends JavaModelOperation {
 				List bodyDeclarations = typeDeclaration.bodyDeclarations();
 				for (Iterator iter = bodyDeclarations.iterator(); iter.hasNext();) {
 					BodyDeclaration bodyDeclaration = (BodyDeclaration) iter.next();
-					bodyDeclaration.setProperty(JavaScriptUnitSorter.RELATIVE_ORDER, new Integer(bodyDeclaration.getStartPosition()));
+					bodyDeclaration.setProperty(JavaScriptUnitSorter.RELATIVE_ORDER, Integer.valueOf(bodyDeclaration.getStartPosition()));
 					typeDeclaration.setProperty(CONTAINS_MALFORMED_NODES, Boolean.valueOf(isMalformed(bodyDeclaration)));
 				}
 				return true;

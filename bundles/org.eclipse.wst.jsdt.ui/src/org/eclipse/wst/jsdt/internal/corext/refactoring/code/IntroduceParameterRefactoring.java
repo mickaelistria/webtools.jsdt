@@ -10,6 +10,7 @@
  *     Felix Pahl (fpahl@web.de) - contributed fix for:
  *       o introduce parameter throws NPE if there are compiler errors
  *         (see https://bugs.eclipse.org/bugs/show_bug.cgi?id=48325)
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
@@ -238,9 +239,9 @@ public class IntroduceParameterRefactoring extends ScriptableRefactoring impleme
 		String defaultValue= fSourceCU.getBuffer().getText(fSelectedExpression.getStartPosition(), fSelectedExpression.getLength());
 		fParameter= ParameterInfo.createInfoForAddedParameter(typeBinding, typeName, name, defaultValue);
 		if (fArguments == null) {
-			List parameterInfos= fChangeSignatureRefactoring.getParameterInfos();
+			List<ParameterInfo> parameterInfos= fChangeSignatureRefactoring.getParameterInfos();
 			int parametersCount= parameterInfos.size();
-			if (parametersCount > 0 && ((ParameterInfo) parameterInfos.get(parametersCount - 1)).isOldVarargs())
+			if (parametersCount > 0 && parameterInfos.get(parametersCount - 1).isOldVarargs())
 				parameterInfos.add(parametersCount - 1, fParameter);
 			else
 				parameterInfos.add(fParameter);
@@ -359,7 +360,7 @@ public class IntroduceParameterRefactoring extends ScriptableRefactoring impleme
 		}		
 	}	
 
-	public List getParameterInfos() {
+	public List/*<ParameterInfo>*/ getParameterInfos() {
 		return fChangeSignatureRefactoring.getParameterInfos();
 	}
 	
@@ -398,15 +399,15 @@ public class IntroduceParameterRefactoring extends ScriptableRefactoring impleme
 	 * @return proposed variable names (may be empty, but not null).
 	 */
 	public String[] guessParameterNames() {
-		LinkedHashSet proposals= new LinkedHashSet(); //retain ordering, but prevent duplicates
+		LinkedHashSet<String> proposals= new LinkedHashSet<String>(); //retain ordering, but prevent duplicates
 		if (fSelectedExpression instanceof FunctionInvocation){
 			proposals.addAll(guessTempNamesFromMethodInvocation((FunctionInvocation) fSelectedExpression, fExcludedParameterNames));
 		}
 		proposals.addAll(guessTempNamesFromExpression(fSelectedExpression, fExcludedParameterNames));
-		return (String[]) proposals.toArray(new String[proposals.size()]);
+		return proposals.toArray(new String[proposals.size()]);
 	}
 	
-	private List/*<String>*/ guessTempNamesFromMethodInvocation(FunctionInvocation selectedMethodInvocation, String[] excludedVariableNames) {
+	private List<String> guessTempNamesFromMethodInvocation(FunctionInvocation selectedMethodInvocation, String[] excludedVariableNames) {
 		SimpleName name = selectedMethodInvocation.getName();
 		
 		String methodName;
@@ -434,7 +435,7 @@ public class IntroduceParameterRefactoring extends ScriptableRefactoring impleme
 		return Arrays.asList(proposals);
 	}
 	
-	private List/*<String>*/ guessTempNamesFromExpression(Expression selectedExpression, String[] excluded) {
+	private List<String> guessTempNamesFromExpression(Expression selectedExpression, String[] excluded) {
 		ITypeBinding expressionBinding= Bindings.normalizeForDeclarationUse(
 			selectedExpression.resolveTypeBinding(),
 			selectedExpression.getAST());
@@ -501,9 +502,9 @@ public class IntroduceParameterRefactoring extends ScriptableRefactoring impleme
 				final RefactoringDescriptor refactoringDescriptor= ((RefactoringChangeDescriptor) descriptor).getRefactoringDescriptor();
 				if (refactoringDescriptor instanceof JDTRefactoringDescriptor) {
 					final JDTRefactoringDescriptor extended= (JDTRefactoringDescriptor) refactoringDescriptor;
-					final Map arguments= new HashMap();
+					final Map<String, String> arguments= new HashMap<String, String>();
 					arguments.put(ATTRIBUTE_ARGUMENT, fParameter.getNewName());
-					arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
+					arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
 					arguments.putAll(extended.getArguments());
 					String signature= fChangeSignatureRefactoring.getMethodName();
 					try {
@@ -534,9 +535,9 @@ public class IntroduceParameterRefactoring extends ScriptableRefactoring impleme
 				int length= -1;
 				final StringTokenizer tokenizer= new StringTokenizer(selection);
 				if (tokenizer.hasMoreTokens())
-					offset= Integer.valueOf(tokenizer.nextToken()).intValue();
+					offset= Integer.parseInt(tokenizer.nextToken());
 				if (tokenizer.hasMoreTokens())
-					length= Integer.valueOf(tokenizer.nextToken()).intValue();
+					length= Integer.parseInt(tokenizer.nextToken());
 				if (offset >= 0 && length >= 0) {
 					fSelectionStart= offset;
 					fSelectionLength= length;

@@ -452,6 +452,9 @@ public abstract class TType {
 		return doEquals(otherType);
 	}
 	
+	@Override
+	public abstract int hashCode();
+	
 	/**
 	 * Performs the actual equals check.
 	 * 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2013 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@
  *         (see https://bugs.eclipse.org/bugs/show_bug.cgi?id=38137)
  *       o Allow 'this' constructor to be inlined  
  *         (see https://bugs.eclipse.org/bugs/show_bug.cgi?id=38093)
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
 
@@ -362,9 +363,9 @@ public class InlineMethodRefactoring extends ScriptableRefactoring {
 			comment.addSetting(RefactoringCoreMessages.InlineMethodRefactoring_replace_references);
 		final JDTRefactoringDescriptor descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.INLINE_METHOD, project, description, comment.asString(), arguments, flags);
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fInitialTypeRoot));
-		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
-		arguments.put(ATTRIBUTE_DELETE, Boolean.valueOf(fDeleteSource).toString());
-		arguments.put(ATTRIBUTE_MODE, new Integer(fCurrentMode == Mode.INLINE_ALL ? 1 : 0).toString());
+		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
+		arguments.put(ATTRIBUTE_DELETE, Boolean.toString(fDeleteSource));
+		arguments.put(ATTRIBUTE_MODE, Integer.toString(fCurrentMode == Mode.INLINE_ALL ? 1 : 0));
 		return new DynamicValidationRefactoringChange(descriptor, RefactoringCoreMessages.InlineMethodRefactoring_edit_inlineCall, fChangeManager.getAllChanges());
 	}
 	

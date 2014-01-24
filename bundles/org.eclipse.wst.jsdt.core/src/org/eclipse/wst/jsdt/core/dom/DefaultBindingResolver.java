@@ -485,13 +485,13 @@ class DefaultBindingResolver extends BindingResolver {
 			Constant constant = compilerExpression.constant;
 			if (constant != null && constant != Constant.NotAConstant) {
 				switch (constant.typeID()) {
-					case TypeIds.T_int : return new Integer(constant.intValue());
-					case TypeIds.T_short : return new Short(constant.shortValue());
-					case TypeIds.T_char : return new Character(constant.charValue());
-					case TypeIds.T_float : return new Float(constant.floatValue());
-					case TypeIds.T_double : return new Double(constant.doubleValue());
-					case TypeIds.T_boolean : return constant.booleanValue() ? Boolean.TRUE : Boolean.FALSE;
-					case TypeIds.T_long : return new Long(constant.longValue());
+					case TypeIds.T_int : return Integer.valueOf(constant.intValue());
+					case TypeIds.T_short : return Short.valueOf(constant.shortValue());
+					case TypeIds.T_char : return Character.valueOf(constant.charValue());
+					case TypeIds.T_float : return Float.valueOf(constant.floatValue());
+					case TypeIds.T_double : return Double.valueOf(constant.doubleValue());
+					case TypeIds.T_boolean : return Boolean.valueOf(constant.booleanValue());
+					case TypeIds.T_long : return Long.valueOf(constant.longValue());
 					case TypeIds.T_JavaLangString : return constant.stringValue();
 				}
 				return null;

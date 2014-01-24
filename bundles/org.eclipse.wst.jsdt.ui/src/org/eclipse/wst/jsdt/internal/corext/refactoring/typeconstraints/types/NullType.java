@@ -28,6 +28,11 @@ public final class NullType extends TType {
 	protected boolean doEquals(TType type) {
 		return true;
 	}
+	
+	@Override
+	public int hashCode() {
+		return getName().hashCode();
+	}
 
 	public String getName() {
 		return "null";  //$NON-NLS-1$

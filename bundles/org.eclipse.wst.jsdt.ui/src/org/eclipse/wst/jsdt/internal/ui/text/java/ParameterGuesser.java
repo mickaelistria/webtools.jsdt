@@ -612,7 +612,7 @@ public class ParameterGuesser {
 	private static String getLongestCommonSubstring(String first, String second) {
 
 		String shorter= (first.length() <= second.length()) ? first : second;
-		String longer= shorter == first ? second : first;
+		String longer= (shorter.equals(first)) ? second : first;
 
 		int minLength= shorter.length();
 

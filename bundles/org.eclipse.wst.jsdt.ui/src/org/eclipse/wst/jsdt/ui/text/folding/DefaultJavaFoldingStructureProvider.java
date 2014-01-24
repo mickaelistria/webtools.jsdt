@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2009 IBM Corporation and others.
+ * Copyright (c) 2006, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.ui.text.folding;
 
@@ -21,6 +22,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.core.runtime.Assert;
@@ -93,7 +95,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 
 		private IType fFirstType;
 		private boolean fHasHeaderComment;
-		private LinkedHashMap fMap= new LinkedHashMap();
+		private LinkedHashMap<JavaProjectionAnnotation, Position> fMap= new LinkedHashMap<JavaProjectionAnnotation, Position>();
 		private IScanner fScanner;
 
 		private FoldingStructureComputationContext(IDocument document, ProjectionAnnotationModel model, boolean allowCollapsing, IScanner scanner) {
@@ -317,10 +319,10 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	 * Matches JavaScript elements contained in a certain set.
 	 */
 	private static final class JavaElementSetFilter implements Filter {
-		private final Set/*<? extends IJavaScriptElement>*/ fSet;
+		private final Set<? extends IJavaScriptElement> fSet;
 		private final boolean fMatchCollapsed;
 
-		private JavaElementSetFilter(Set/*<? extends IJavaScriptElement>*/ set, boolean matchCollapsed) {
+		private JavaElementSetFilter(Set<? extends IJavaScriptElement> set, boolean matchCollapsed) {
 			fSet= set;
 			fMatchCollapsed= matchCollapsed;
 		}
@@ -869,18 +871,17 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		if (ctx == null)
 			return;
 
-		Map additions= new HashMap();
-		List deletions= new ArrayList();
-		List updates= new ArrayList();
+		Map<JavaProjectionAnnotation, Position> additions= new HashMap<JavaProjectionAnnotation, Position>();
+		List<JavaProjectionAnnotation> deletions= new ArrayList<JavaProjectionAnnotation>();
+		List<JavaProjectionAnnotation> updates= new ArrayList<JavaProjectionAnnotation>();
 
 		computeFoldingStructure(ctx);
-		Map newStructure= ctx.fMap;
-		Map oldStructure= computeCurrentStructure(ctx);
+		LinkedHashMap<JavaProjectionAnnotation, Position> newStructure= ctx.fMap;
+		Map<IJavaScriptElement, List<Tuple>> oldStructure= computeCurrentStructure(ctx);
 
-		Iterator e= newStructure.keySet().iterator();
-		while (e.hasNext()) {
-			JavaProjectionAnnotation newAnnotation= (JavaProjectionAnnotation) e.next();
-			Position newPosition= (Position) newStructure.get(newAnnotation);
+		for (Entry<JavaProjectionAnnotation, Position> entry : newStructure.entrySet()) {
+			JavaProjectionAnnotation newAnnotation= entry.getKey();
+			Position newPosition= entry.getValue();
 
 			IJavaScriptElement element= newAnnotation.getElement();
 			/*
@@ -893,15 +894,15 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 			 * stable.
 			 */
 			boolean isMalformedAnonymousType= newPosition.getOffset() == 0 && element.getElementType() == IJavaScriptElement.TYPE && isInnerType((IType) element);
-			List annotations= (List) oldStructure.get(element);
+			List<Tuple> annotations= oldStructure.get(element);
 			if (annotations == null) {
 				if (!isMalformedAnonymousType)
 					additions.put(newAnnotation, newPosition);
 			} else {
-				Iterator x= annotations.iterator();
+				Iterator<Tuple> x= annotations.iterator();
 				boolean matched= false;
 				while (x.hasNext()) {
-					Tuple tuple= (Tuple) x.next();
+					Tuple tuple = x.next();
 					JavaProjectionAnnotation existingAnnotation= tuple.annotation;
 					Position existingPosition= tuple.position;
 					if (newAnnotation.isComment() == existingAnnotation.isComment()) {
@@ -929,18 +930,16 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 			}
 		}
 
-		e= oldStructure.values().iterator();
-		while (e.hasNext()) {
-			List list= (List) e.next();
-			int size= list.size();
-			for (int i= 0; i < size; i++)
-				deletions.add(((Tuple) list.get(i)).annotation);
+		for (List<Tuple> list : oldStructure.values()) {
+			for (Tuple tuple : list) {
+				deletions.add(tuple.annotation);
+			}
 		}
 
 		match(deletions, additions, updates, ctx);
 
-		Annotation[] deletedArray= (Annotation[]) deletions.toArray(new Annotation[deletions.size()]);
-		Annotation[] changedArray= (Annotation[]) updates.toArray(new Annotation[updates.size()]);
+		Annotation[] deletedArray= deletions.toArray(new Annotation[deletions.size()]);
+		Annotation[] changedArray= updates.toArray(new Annotation[updates.size()]);
 		ctx.getModel().modifyAnnotations(deletedArray, additions, changedArray);
 		
 		ctx.fScanner.setSource(null);
@@ -1079,7 +1078,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 				if (contents == null)
 					return new IRegion[0];
 
-				List regions= new ArrayList();
+				List<IRegion> regions= new ArrayList<IRegion>();
 				if (!ctx.hasFirstType() && reference instanceof IType) {
 					ctx.setFirstType((IType) reference);
 					IRegion headerComment= computeHeaderComment(ctx);
@@ -1268,16 +1267,16 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	 * @param changes list with changed annotations
 	 * @param ctx	the context 
 	 */
-	private void match(List deletions, Map additions, List changes, FoldingStructureComputationContext ctx) {
+	private void match(List<JavaProjectionAnnotation> deletions, Map<JavaProjectionAnnotation, Position> additions, List<JavaProjectionAnnotation> changes, FoldingStructureComputationContext ctx) {
 		if (deletions.isEmpty() || (additions.isEmpty() && changes.isEmpty()))
 			return;
 
-		List newDeletions= new ArrayList();
-		List newChanges= new ArrayList();
+		List<JavaProjectionAnnotation> newDeletions= new ArrayList<JavaProjectionAnnotation>();
+		List<JavaProjectionAnnotation> newChanges= new ArrayList<JavaProjectionAnnotation>();
 
-		Iterator deletionIterator= deletions.iterator();
+		Iterator<JavaProjectionAnnotation> deletionIterator= deletions.iterator();
 		while (deletionIterator.hasNext()) {
-			JavaProjectionAnnotation deleted= (JavaProjectionAnnotation) deletionIterator.next();
+			JavaProjectionAnnotation deleted= deletionIterator.next();
 			Position deletedPosition= ctx.getModel().getPosition(deleted);
 			if (deletedPosition == null)
 				continue;
@@ -1336,12 +1335,12 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 	 * @param ctx the context
 	 * @return a matching tuple or <code>null</code> for no match
 	 */
-	private Tuple findMatch(Tuple tuple, Collection annotations, Map positionMap, FoldingStructureComputationContext ctx) {
-		Iterator it= annotations.iterator();
+	private Tuple findMatch(Tuple tuple, Collection<JavaProjectionAnnotation> annotations, Map<JavaProjectionAnnotation, Position> positionMap, FoldingStructureComputationContext ctx) {
+		Iterator<JavaProjectionAnnotation> it= annotations.iterator();
 		while (it.hasNext()) {
-			JavaProjectionAnnotation annotation= (JavaProjectionAnnotation) it.next();
+			JavaProjectionAnnotation annotation= it.next();
 			if (tuple.annotation.isComment() == annotation.isComment()) {
-				Position position= positionMap == null ? ctx.getModel().getPosition(annotation) : (Position) positionMap.get(annotation);
+				Position position= positionMap == null ? ctx.getModel().getPosition(annotation) : positionMap.get(annotation);
 				if (position == null)
 					continue;
 
@@ -1355,8 +1354,8 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		return null;
 	}
 
-	private Map computeCurrentStructure(FoldingStructureComputationContext ctx) {
-		Map map= new HashMap();
+	private Map<IJavaScriptElement, List<Tuple>> computeCurrentStructure(FoldingStructureComputationContext ctx) {
+		Map<IJavaScriptElement, List<Tuple>> map= new HashMap<IJavaScriptElement, List<Tuple>>();
 		ProjectionAnnotationModel model= ctx.getModel();
 		Iterator e= model.getAnnotationIterator();
 		while (e.hasNext()) {
@@ -1365,22 +1364,21 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 				JavaProjectionAnnotation java= (JavaProjectionAnnotation) annotation;
 				Position position= model.getPosition(java);
 				Assert.isNotNull(position);
-				List list= (List) map.get(java.getElement());
+				List<Tuple> list= map.get(java.getElement());
 				if (list == null) {
-					list= new ArrayList(2);
+					list= new ArrayList<Tuple>(2);
 					map.put(java.getElement(), list);
 				}
 				list.add(new Tuple(java, position));
 			}
 		}
 
-		Comparator comparator= new Comparator() {
-			public int compare(Object o1, Object o2) {
-				return ((Tuple) o1).position.getOffset() - ((Tuple) o2).position.getOffset();
+		Comparator<Tuple> comparator= new Comparator<Tuple>() {
+			public int compare(Tuple o1, Tuple o2) {
+				return o1.position.getOffset() - o2.position.getOffset();
 			}
 		};
-		for (Iterator it= map.values().iterator(); it.hasNext();) {
-			List list= (List) it.next();
+		for (List<Tuple> list : map.values()) {
 			Collections.sort(list, comparator);
 		}
 		return map;
@@ -1433,7 +1431,7 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 		if (model == null)
 			return;
 		
-		List modified= new ArrayList();
+		List<JavaProjectionAnnotation> modified= new ArrayList<JavaProjectionAnnotation>();
 		Iterator iter= model.getAnnotationIterator();
 		while (iter.hasNext()) {
 			Object annotation= iter.next();
@@ -1451,6 +1449,6 @@ public class DefaultJavaFoldingStructureProvider implements IJavaFoldingStructur
 			}
 		}
 		
-		model.modifyAnnotations(null, null, (Annotation[]) modified.toArray(new Annotation[modified.size()]));
+		model.modifyAnnotations(null, null, modified.toArray(new Annotation[modified.size()]));
 	}
 }

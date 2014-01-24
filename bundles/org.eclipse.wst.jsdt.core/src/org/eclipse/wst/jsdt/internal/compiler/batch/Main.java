@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2010 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -9,6 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *     Tom Tromey - Contribution for bug 125961
  *     Tom Tromey - Contribution for bug 159641
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.batch;
 
@@ -73,9 +74,9 @@ public class Main implements ProblemSeverities, SuffixConstants {
 	 * Resource bundle factory to share bundles for the same locale
 	 */
 	public static class ResourceBundleFactory {
-		private static HashMap Cache = new HashMap();
+		private static HashMap<Locale, ResourceBundle> Cache = new HashMap<Locale, ResourceBundle>();
 		public static synchronized ResourceBundle getBundle(Locale locale) {
-			ResourceBundle bundle = (ResourceBundle) Cache.get(locale);
+			ResourceBundle bundle = Cache.get(locale);
 			if (bundle == null) {
 				bundle = ResourceBundle.getBundle(Main.bundleName, locale);
 				Cache.put(locale, bundle);
@@ -151,7 +152,7 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		private static final String XML_DTD_DECLARATION = "<!DOCTYPE compiler PUBLIC \"-//Eclipse.org//DTD Eclipse JDT 3.2.003 Compiler//EN\" \"http://www.eclipse.org/jdt/core/compiler_32_003.dtd\">"; //$NON-NLS-1$
 		static {
 			try {
-				Class c = IProblem.class;
+				Class<IProblem> c = IProblem.class;
 				Field[] fields = c.getFields();
 				for (int i = 0, max = fields.length; i < max; i++) {
 					Field field = fields[i];
@@ -172,12 +173,12 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		private PrintWriter log;
 		private Main main;
 		private PrintWriter out;
-		private HashMap parameters;
+		private HashMap<String, Object> parameters;
 		int tagBits;
 		public Logger(Main main, PrintWriter out, PrintWriter err) {
 			this.out = out;
 			this.err = err;
-			this.parameters = new HashMap();
+			this.parameters = new HashMap<String, Object>();
 			this.main = main;
 		}
 
@@ -543,7 +544,7 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		 */
 		public void logNumberOfClassFilesGenerated(int exportedClassFilesCounter) {
 			if ((this.tagBits & Logger.XML) != 0) {
-				this.parameters.put(Logger.VALUE, new Integer(exportedClassFilesCounter));
+				this.parameters.put(Logger.VALUE, Integer.valueOf(exportedClassFilesCounter));
 				this.printTag(Logger.NUMBER_OF_CLASSFILES, this.parameters, true, true);
 			}
 			if (exportedClassFilesCounter == 1) {
@@ -557,22 +558,19 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		/**
 		 * @param options the given compiler options
 		 */
-		public void logOptions(Map options) {
+		public void logOptions(Map/*<String, Object>*/ options) {
 			if ((this.tagBits & Logger.XML) != 0) {
 				this.printTag(Logger.OPTIONS, null, true, false);
-				final Set entriesSet = options.entrySet();
-				Object[] entries = entriesSet.toArray();
-				Arrays.sort(entries, new Comparator() {
-					public int compare(Object o1, Object o2) {
-						Map.Entry entry1 = (Map.Entry) o1;
-						Map.Entry entry2 = (Map.Entry) o2;
-						return ((String) entry1.getKey()).compareTo((String) entry2.getKey());
+				final Set<Map.Entry<String, Object>> entriesSet = options.entrySet();
+				Map.Entry<String, Object>[] entries = entriesSet.toArray(new Map.Entry[entriesSet.size()]);
+				Arrays.sort(entries, new Comparator<Map.Entry<String, Object>>() {
+					public int compare(Map.Entry<String, Object> entry1, Map.Entry<String, Object> entry2) {
+						return entry1.getKey().compareTo(entry2.getKey());
 					}
 				});
 				for (int i = 0, max = entries.length; i < max; i++) {
-					Map.Entry entry = (Map.Entry) entries[i];
-					String key = (String) entry.getKey();
-					this.parameters.put(Logger.KEY, key);
+					Map.Entry<String, Object> entry = (Map.Entry<String, Object>) entries[i];
+					this.parameters.put(Logger.KEY, entry.getKey());
 					this.parameters.put(Logger.VALUE, entry.getValue());
 					this.printTag(Logger.OPTION, this.parameters, true, true);
 				}
@@ -684,10 +682,10 @@ public class Main implements ProblemSeverities, SuffixConstants {
 			int globalErrorsCount, int globalWarningsCount, int globalTasksCount) {
 			if ((this.tagBits & Logger.XML) != 0) {
 				// generate xml
-				this.parameters.put(Logger.NUMBER_OF_PROBLEMS, new Integer(globalProblemsCount));
-				this.parameters.put(Logger.NUMBER_OF_ERRORS, new Integer(globalErrorsCount));
-				this.parameters.put(Logger.NUMBER_OF_WARNINGS, new Integer(globalWarningsCount));
-				this.parameters.put(Logger.NUMBER_OF_TASKS, new Integer(globalTasksCount));
+				this.parameters.put(Logger.NUMBER_OF_PROBLEMS, Integer.valueOf(globalProblemsCount));
+				this.parameters.put(Logger.NUMBER_OF_ERRORS, Integer.valueOf(globalErrorsCount));
+				this.parameters.put(Logger.NUMBER_OF_WARNINGS, Integer.valueOf(globalWarningsCount));
+				this.parameters.put(Logger.NUMBER_OF_TASKS, Integer.valueOf(globalTasksCount));
 				this.printTag(Logger.PROBLEM_SUMMARY, this.parameters, true, true);
 			}
 			if (globalProblemsCount == 1) {
@@ -767,9 +765,9 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		 */
 		public void logTiming(long time, long lineCount) {
 			if ((this.tagBits & Logger.XML) != 0) {
-				this.parameters.put(Logger.VALUE, new Long(time));
+				this.parameters.put(Logger.VALUE, Long.valueOf(time));
 				this.printTag(Logger.TIME, this.parameters, true, true);
-				this.parameters.put(Logger.VALUE, new Long(lineCount));
+				this.parameters.put(Logger.VALUE, Long.valueOf(lineCount));
 				this.printTag(Logger.NUMBER_OF_LINES, this.parameters, true, true);
 			}
 			if (lineCount != 0) {
@@ -843,19 +841,19 @@ public class Main implements ProblemSeverities, SuffixConstants {
 			final int sourceEnd = problem.getSourceEnd();
 			final int id = problem.getID();
 			this.parameters.put(Logger.ID, getFieldName(id)); // ID as field name
-			this.parameters.put(Logger.PROBLEM_ID, new Integer(id)); // ID as numeric value
+			this.parameters.put(Logger.PROBLEM_ID, Integer.valueOf(id)); // ID as numeric value
 			boolean isError = problem.isError();
 			int severity = isError ? ProblemSeverities.Error : ProblemSeverities.Warning;
 			this.parameters.put(Logger.PROBLEM_SEVERITY, isError ? Logger.ERROR : Logger.WARNING);
-			this.parameters.put(Logger.PROBLEM_LINE, new Integer(problem.getSourceLineNumber()));
-			this.parameters.put(Logger.PROBLEM_SOURCE_START, new Integer(sourceStart));
-			this.parameters.put(Logger.PROBLEM_SOURCE_END, new Integer(sourceEnd));
+			this.parameters.put(Logger.PROBLEM_LINE, Integer.valueOf(problem.getSourceLineNumber()));
+			this.parameters.put(Logger.PROBLEM_SOURCE_START, Integer.valueOf(sourceStart));
+			this.parameters.put(Logger.PROBLEM_SOURCE_END, Integer.valueOf(sourceEnd));
 			String problemOptionKey = getProblemOptionKey(id);
 			if (problemOptionKey != null) {
 				this.parameters.put(Logger.PROBLEM_OPTION_KEY, problemOptionKey);
 			}
 			int categoryID = ProblemReporter.getProblemCategory(severity, id);
-			this.parameters.put(Logger.PROBLEM_CATEGORY_ID, new Integer(categoryID));
+			this.parameters.put(Logger.PROBLEM_CATEGORY_ID, Integer.valueOf(categoryID));
 			this.printTag(Logger.PROBLEM_TAG, this.parameters, true, false);
 			this.parameters.put(Logger.VALUE, problem.getMessage());
 			this.printTag(Logger.PROBLEM_MESSAGE, this.parameters, true, true);
@@ -880,9 +878,9 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		 *            the given unit source
 		 */
 		private void logXmlTask(CategorizedProblem problem, char[] unitSource) {
-			this.parameters.put(Logger.PROBLEM_LINE, new Integer(problem.getSourceLineNumber()));
-			this.parameters.put(Logger.PROBLEM_SOURCE_START, new Integer(problem.getSourceStart()));
-			this.parameters.put(Logger.PROBLEM_SOURCE_END, new Integer(problem.getSourceEnd()));
+			this.parameters.put(Logger.PROBLEM_LINE, Integer.valueOf(problem.getSourceLineNumber()));
+			this.parameters.put(Logger.PROBLEM_SOURCE_START, Integer.valueOf(problem.getSourceStart()));
+			this.parameters.put(Logger.PROBLEM_SOURCE_END, Integer.valueOf(problem.getSourceEnd()));
 			String problemOptionKey = getProblemOptionKey(problem.getID());
 			if (problemOptionKey != null) {
 				this.parameters.put(Logger.PROBLEM_OPTION_KEY, problemOptionKey);
@@ -955,7 +953,7 @@ public class Main implements ProblemSeverities, SuffixConstants {
 			}
 		}
 
-		private void printTag(String name, HashMap params, boolean insertNewLine, boolean closeTag) {
+		private void printTag(String name, HashMap<String, Object> params, boolean insertNewLine, boolean closeTag) {
 			((GenericXMLWriter) this.log).printTag(name, parameters, true, insertNewLine, closeTag);
 			this.parameters.clear();
 		}
@@ -1005,14 +1003,14 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		 * Only use in xml mode.
 		 */
 		private void startLoggingProblems(int errors, int warnings) {
-			this.parameters.put(Logger.NUMBER_OF_PROBLEMS, new Integer(errors + warnings));
-			this.parameters.put(Logger.NUMBER_OF_ERRORS, new Integer(errors));
-			this.parameters.put(Logger.NUMBER_OF_WARNINGS, new Integer(warnings));
+			this.parameters.put(Logger.NUMBER_OF_PROBLEMS, Integer.valueOf(errors + warnings));
+			this.parameters.put(Logger.NUMBER_OF_ERRORS, Integer.valueOf(errors));
+			this.parameters.put(Logger.NUMBER_OF_WARNINGS, Integer.valueOf(warnings));
 			this.printTag(Logger.PROBLEMS, this.parameters, true, false);
 		}
 
 		private void startLoggingExtraProblems(int count) {
-			this.parameters.put(Logger.NUMBER_OF_PROBLEMS, new Integer(count));
+			this.parameters.put(Logger.NUMBER_OF_PROBLEMS, Integer.valueOf(count));
 			this.printTag(Logger.EXTRA_PROBLEMS, this.parameters, true, false);
 		}
 
@@ -1021,8 +1019,8 @@ public class Main implements ProblemSeverities, SuffixConstants {
 				ICompilationUnit compilationUnit = compilationResult.compilationUnit;
 				if (compilationUnit != null) {
     				char[] fileName = compilationUnit.getFileName();
-    				File f = new File(new String(fileName));
     				if (fileName != null) {
+    					File f = new File(new String(fileName));
     					this.parameters.put(Logger.PATH, f.getAbsolutePath());
     				}
     				char[][] packageName = compilationResult.packageName;
@@ -1036,7 +1034,7 @@ public class Main implements ProblemSeverities, SuffixConstants {
 					if (destinationPath == null) {
 						destinationPath = this.main.destinationPath;
 					}
-					if (destinationPath != null && destinationPath != NONE) {
+					if (destinationPath != null && ! NONE.equals(destinationPath)) {
 						if (File.separatorChar == '/') {
 							this.parameters.put(Logger.OUTPUT, destinationPath);
 						} else {
@@ -1054,13 +1052,13 @@ public class Main implements ProblemSeverities, SuffixConstants {
 		}
 		public void startLoggingTasks(int tasks) {
 			if ((this.tagBits & Logger.XML) != 0) {
-				this.parameters.put(Logger.NUMBER_OF_TASKS, new Integer(tasks));
+				this.parameters.put(Logger.NUMBER_OF_TASKS, Integer.valueOf(tasks));
 				this.printTag(Logger.TASKS, this.parameters, true, false);
 			}
 		}
 
 		public void loggingExtraProblems(Main currentMain) {
-			ArrayList problems = currentMain.extraProblems;
+			ArrayList<IProblem> problems = currentMain.extraProblems;
 			final int count = problems.size();
 			int localErrorCount = 0;
 			int localProblemCount = 0;
@@ -1105,9 +1103,9 @@ public class Main implements ProblemSeverities, SuffixConstants {
 			final int sourceEnd = problem.getSourceEnd();
 			boolean isError = problem.isError();
 			this.parameters.put(Logger.PROBLEM_SEVERITY, isError ? Logger.ERROR : Logger.WARNING);
-			this.parameters.put(Logger.PROBLEM_LINE, new Integer(problem.getSourceLineNumber()));
-			this.parameters.put(Logger.PROBLEM_SOURCE_START, new Integer(sourceStart));
-			this.parameters.put(Logger.PROBLEM_SOURCE_END, new Integer(sourceEnd));
+			this.parameters.put(Logger.PROBLEM_LINE, Integer.valueOf(problem.getSourceLineNumber()));
+			this.parameters.put(Logger.PROBLEM_SOURCE_START, Integer.valueOf(sourceStart));
+			this.parameters.put(Logger.PROBLEM_SOURCE_END, Integer.valueOf(sourceEnd));
 			this.printTag(Logger.EXTRA_PROBLEM_TAG, this.parameters, true, false);
 			this.parameters.put(Logger.VALUE, problem.getMessage());
 			this.printTag(Logger.PROBLEM_MESSAGE, this.parameters, true, true);
@@ -1140,11 +1138,11 @@ public class Main implements ProblemSeverities, SuffixConstants {
 						this.main.bind(
 								"requestor.error", //$NON-NLS-1$
 								Integer.toString(globalErrorCount),
-								new String(fileName))
+								fileName)
 								: this.main.bind(
 										"requestor.warning", //$NON-NLS-1$
 										Integer.toString(globalErrorCount),
-										new String(fileName)));
+										fileName));
 				final String errorReportSource = errorReportSource(problem, null, 0);
 				this.printlnErr(errorReportSource);
 				this.printlnErr(problem.getMessage());
@@ -1356,7 +1354,7 @@ public class Main implements ProblemSeverities, SuffixConstants {
 	public Logger logger;
 	public int maxProblems;
 	public boolean noWarn = false;
-	public Map options;
+	public Map/*<String, Object>*/ options;
 	protected PrintWriter out;
 	public boolean proceed = true;
 	public boolean proceedOnError = false;
@@ -1382,7 +1380,7 @@ private String[] expandedCommandLine;
 
 private PrintWriter err;
 
-protected ArrayList extraProblems;
+protected ArrayList/*<IProblem>*/ extraProblems;
 
 public Main(PrintWriter outWriter, PrintWriter errWriter, boolean systemExitWhenFinished) {
 	this(outWriter, errWriter, systemExitWhenFinished, null);
@@ -1398,8 +1396,8 @@ public void addExtraProblems(CategorizedProblem problem) {
 	}
 	this.extraProblems.add(problem);
 }
-protected void addNewEntry(ArrayList paths, String currentClasspathName,
-		ArrayList currentRuleSpecs, String customEncoding,
+protected void addNewEntry(ArrayList/*<FileSystem.Classpath>*/ paths, String currentClasspathName,
+		ArrayList/*<String>*/ currentRuleSpecs, String customEncoding,
 		String destPath, boolean isSourceOnly,
 		boolean rejectDestinationPathOnJars) throws InvalidInputException {
 
@@ -1408,10 +1406,10 @@ protected void addNewEntry(ArrayList paths, String currentClasspathName,
 	if (rulesSpecsSize != 0) {
 		AccessRule[] accessRules = new AccessRule[currentRuleSpecs.size()];
     	boolean rulesOK = true;
-    	Iterator i = currentRuleSpecs.iterator();
+    	Iterator<String> i = currentRuleSpecs.iterator();
     	int j = 0;
     	while (i.hasNext()) {
-    		String ruleSpec = (String) i.next();
+    		String ruleSpec = i.next();
     		char key = ruleSpec.charAt(0);
     		String pattern = ruleSpec.substring(1);
     		if (pattern.length() > 0) {

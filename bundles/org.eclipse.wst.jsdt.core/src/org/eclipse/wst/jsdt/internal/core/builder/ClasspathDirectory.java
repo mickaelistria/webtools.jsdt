@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.builder;
 
@@ -85,6 +86,14 @@ public boolean equals(Object o) {
 		if (this.accessRuleSet == null || !this.accessRuleSet.equals(dir.accessRuleSet))
 			return false;
 	return this.binaryFolder.equals(dir.binaryFolder);
+}
+
+@Override
+public int hashCode() {
+	int hash = 0;
+	if (this.accessRuleSet != null) hash ^= this.accessRuleSet.hashCode();
+	hash ^= this.binaryFolder.hashCode();
+	return hash;
 }
 
 public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String qualifiedBinaryFileName) {

@@ -447,6 +447,12 @@ public class CompilationUnit extends Openable implements IJavaScriptUnit, org.ec
 		CompilationUnit other = (CompilationUnit)obj;
 		return this.owner.equals(other.owner) && super.equals(obj);
 	}
+	
+	@Override
+	public int hashCode() {
+		return this.owner.hashCode() ^ super.hashCode();
+	}
+	
 	public boolean exists() {
 		// working copy always exists in the model until it is gotten rid of (even if not on classpath)
 		if (getPerWorkingCopyInfo() != null) return true;

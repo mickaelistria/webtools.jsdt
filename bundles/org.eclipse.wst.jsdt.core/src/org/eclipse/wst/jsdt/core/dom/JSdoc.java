@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 
 package org.eclipse.wst.jsdt.core.dom;
@@ -306,7 +307,7 @@ public class JSdoc extends Comment {
 	 */
 	int memSize() {
 		int size = super.memSize() + 2 * 4;
-		if (this.comment != MINIMAL_DOC_COMMENT) {
+		if (!MINIMAL_DOC_COMMENT.equals(this.comment)) {
 			// anything other than the default string takes space
 			size += stringSize(this.comment);
 		}

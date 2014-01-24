@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.refactoring;
 
@@ -80,7 +81,7 @@ public class MoveMembersWizard extends RefactoringWizard {
 		private Button fLeaveDelegateCheckBox;
 		private Button fDeprecateDelegateCheckBox;
 		private static final int MRU_COUNT= 10;
-		private static List fgMruDestinations= new ArrayList(MRU_COUNT);
+		private static List<String> fgMruDestinations= new ArrayList<String>(MRU_COUNT);
 
 		public MoveMembersInputPage() {
 			super(PAGE_NAME);
@@ -89,7 +90,7 @@ public class MoveMembersWizard extends RefactoringWizard {
 		public void setVisible(boolean visible){
 			if (visible){
 				String message= Messages.format(RefactoringMessages.MoveMembersInputPage_descriptionKey, 
-					new String[]{new Integer(getMoveProcessor().getMembersToMove().length).toString(),
+					new String[]{Integer.toString(getMoveProcessor().getMembersToMove().length),
 								 JavaModelUtil.getFullyQualifiedName(getMoveProcessor().getDeclaringType())});
 				setDescription(message);
 			}	
@@ -162,7 +163,7 @@ public class MoveMembersWizard extends RefactoringWizard {
 			fDestinationField= new Combo(composite, SWT.SINGLE | SWT.BORDER);
 			fDestinationField.setFocus();
 			fDestinationField.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-			fDestinationField.setItems((String[]) fgMruDestinations.toArray(new String[fgMruDestinations.size()]));
+			fDestinationField.setItems(fgMruDestinations.toArray(new String[fgMruDestinations.size()]));
 			fDestinationField.addModifyListener(new ModifyListener(){
 				public void modifyText(ModifyEvent e) {
 					handleDestinationChanged();

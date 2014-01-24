@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,6 +10,7 @@
  *     Theodora Yeung (tyeung@bea.com) - ensure that JarPackageFragmentRoot make it into cache
  *                                                           before its contents
  *                                                           (see https://bugs.eclipse.org/bugs/show_bug.cgi?id=102422)
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -166,9 +167,9 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	/**
 	 * Classpath containers pool
 	 */
-	public HashMap containers = new HashMap(5);
+	public HashMap/*<IJavaScriptProject, Map<IPath, IJsGlobalScopeContainer>>*/ containers = new HashMap(5);
 	public HashMap previousSessionContainers = new HashMap(5);
-	private ThreadLocal containerInitializationInProgress = new ThreadLocal();
+	private ThreadLocal<Map<IJavaScriptProject, Set<IPath>>> containerInitializationInProgress = new ThreadLocal<Map<IJavaScriptProject, Set<IPath>>>();
 	public boolean batchContainerInitializations = false;
 	public ThreadLocal batchContainerInitializationsProgress = new ThreadLocal();
 	public HashMap containerInitializersCache = new HashMap(5);
@@ -176,7 +177,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	/*
 	 * A HashSet that contains the IJavaScriptProject whose classpath is being resolved.
 	 */
-	private ThreadLocal classpathsBeingResolved = new ThreadLocal();
+	private ThreadLocal<HashSet<IJavaScriptProject>> classpathsBeingResolved = new ThreadLocal<HashSet<IJavaScriptProject>>();
 
 	/*
 	 * The unique workspace scope
@@ -287,8 +288,8 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	public final static IJavaScriptUnit[] NO_WORKING_COPY = new IJavaScriptUnit[0];
 
 	// Preferences
-	HashSet optionNames = new HashSet(20);
-	Hashtable optionsCache;
+	HashSet/*<String>*/ optionNames = new HashSet<String>(20);
+	Hashtable/*<String, String>*/ optionsCache;
 
 	public final IEclipsePreferences[] preferencesLookup = new IEclipsePreferences[2];
 	static final int PREF_INSTANCE = 0;
@@ -306,7 +307,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		 * it contains validationParticipants.
 		 */
 		private Object[][] registeredParticipants = null;
-		private HashSet managedMarkerTypes;
+		private HashSet<String> managedMarkerTypes;
 
 		public ValidationParticipant[] getvalidationParticipants(IJavaScriptProject project) {
 			final Object[][] participantsPerSource = getRegisteredParticipants();
@@ -357,13 +358,13 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			if (this.registeredParticipants != null) {
 				return this.registeredParticipants;
 			}
-			this.managedMarkerTypes = new HashSet();
+			this.managedMarkerTypes = new HashSet<String>();
 			IExtensionPoint extension = Platform.getExtensionRegistry().getExtensionPoint(JavaScriptCore.PLUGIN_ID, COMPILATION_PARTICIPANT_EXTPOINT_ID);
 			if (extension == null)
 				return this.registeredParticipants = NO_PARTICIPANTS;
-			final ArrayList modifyingEnv = new ArrayList();
-			final ArrayList creatingProblems = new ArrayList();
-			final ArrayList others = new ArrayList();
+			final ArrayList<IConfigurationElement> modifyingEnv = new ArrayList<IConfigurationElement>();
+			final ArrayList<IConfigurationElement> creatingProblems = new ArrayList<IConfigurationElement>();
+			final ArrayList<IConfigurationElement> others = new ArrayList<IConfigurationElement>();
 			IExtension[] extensions = extension.getExtensions();
 			// for all extensions of this point...
 			for(int i = 0; i < extensions.length; i++) {
@@ -449,10 +450,10 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			}
 		}
 
-		private int sortParticipants(ArrayList group, IConfigurationElement[] configElements, int index) {
+		private int sortParticipants(ArrayList<IConfigurationElement> group, IConfigurationElement[] configElements, int index) {
 			int size = group.size();
 			if (size == 0) return index;
-			Object[] elements = group.toArray();
+			IConfigurationElement[] elements = group.toArray(new IConfigurationElement[group.size()]);
 			Util.sort(elements, new Util.Comparer() {
 				public int compare(Object a, Object b) {
 					if (a == b) return 0;
@@ -468,7 +469,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 				}
 			});
 			for (int i = 0; i < size; i++)
-				configElements[index+i] = (IConfigurationElement) elements[i];
+				configElements[index+i] = elements[i];
 			return index + size;
 		}
 	}
@@ -481,49 +482,49 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			return CONTAINER_INITIALIZATION_IN_PROGRESS;
 		}
 
-		Map projectContainers = (Map)this.containers.get(project);
+		Map<IPath, IJsGlobalScopeContainer> projectContainers = (Map<IPath, IJsGlobalScopeContainer>)this.containers.get(project);
 		if (projectContainers == null){
 			return null;
 		}
-		IJsGlobalScopeContainer container = (IJsGlobalScopeContainer)projectContainers.get(containerPath);
+		IJsGlobalScopeContainer container = projectContainers.get(containerPath);
 		return container;
 	}
 
 	public synchronized IJsGlobalScopeContainer containerGetDefaultToPreviousSession(IJavaScriptProject project, IPath containerPath) {
-		Map projectContainers = (Map)this.containers.get(project);
+		Map<IPath, IJsGlobalScopeContainer> projectContainers = (Map<IPath, IJsGlobalScopeContainer>)this.containers.get(project);
 		if (projectContainers == null)
 			return getPreviousSessionContainer(containerPath, project);
-		IJsGlobalScopeContainer container = (IJsGlobalScopeContainer)projectContainers.get(containerPath);
+		IJsGlobalScopeContainer container = projectContainers.get(containerPath);
 		if (container == null)
 			return getPreviousSessionContainer(containerPath, project);
 		return container;
 	}
 
-	private synchronized Map containerClone(IJavaScriptProject project) {
-		Map originalProjectContainers = (Map)this.containers.get(project);
+	private synchronized Map<IPath, IJsGlobalScopeContainer> containerClone(IJavaScriptProject project) {
+		Map<IPath, IJsGlobalScopeContainer> originalProjectContainers = (Map<IPath, IJsGlobalScopeContainer>)this.containers.get(project);
 		if (originalProjectContainers == null) return null;
-		Map projectContainers = new HashMap(originalProjectContainers.size());
+		Map<IPath, IJsGlobalScopeContainer> projectContainers = new HashMap<IPath, IJsGlobalScopeContainer>(originalProjectContainers.size());
 		projectContainers.putAll(originalProjectContainers);
 		return projectContainers;
 	}
 
 	private boolean containerIsInitializationInProgress(IJavaScriptProject project, IPath containerPath) {
-		Map initializations = (Map)this.containerInitializationInProgress.get();
+		Map<IJavaScriptProject, Set<IPath>> initializations = this.containerInitializationInProgress.get();
 		if (initializations == null)
 			return false;
-		HashSet projectInitializations = (HashSet) initializations.get(project);
+		Set<IPath> projectInitializations = initializations.get(project);
 		if (projectInitializations == null)
 			return false;
 		return projectInitializations.contains(containerPath);
 	}
 
 	private void containerAddInitializationInProgress(IJavaScriptProject project, IPath containerPath) {
-		Map initializations = (Map)this.containerInitializationInProgress.get();
+		Map<IJavaScriptProject, Set<IPath>> initializations = this.containerInitializationInProgress.get();
 		if (initializations == null)
-			this.containerInitializationInProgress.set(initializations = new HashMap());
-		HashSet projectInitializations = (HashSet) initializations.get(project);
+			this.containerInitializationInProgress.set(initializations = new HashMap<IJavaScriptProject, Set<IPath>>());
+		Set<IPath> projectInitializations = initializations.get(project);
 		if (projectInitializations == null)
-			initializations.put(project, projectInitializations = new HashSet());
+			initializations.put(project, projectInitializations = new HashSet<IPath>());
 		projectInitializations.add(containerPath);
 	}
 
@@ -708,10 +709,10 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	}
 
 	private void containerRemoveInitializationInProgress(IJavaScriptProject project, IPath containerPath) {
-		Map initializations = (Map)this.containerInitializationInProgress.get();
+		Map<IJavaScriptProject, Set<IPath>> initializations = (Map<IJavaScriptProject, Set<IPath>>)this.containerInitializationInProgress.get();
 		if (initializations == null)
 			return;
-		HashSet projectInitializations = (HashSet) initializations.get(project);
+		Set<IPath> projectInitializations = initializations.get(project);
 		if (projectInitializations == null)
 			return;
 		projectInitializations.remove(containerPath);
@@ -724,13 +725,11 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	private synchronized void containersReset(String[] containerIDs) {
 		for (int i = 0; i < containerIDs.length; i++) {
 			String containerID = containerIDs[i];
-			Iterator projectIterator = this.containers.values().iterator();
+			Iterator<Map<IPath, Object>> projectIterator = this.containers.values().iterator();
 			while (projectIterator.hasNext()){
-				Map projectContainers = (Map) projectIterator.next();
+				Map<IPath, Object> projectContainers = projectIterator.next();
 				if (projectContainers != null){
-					Iterator containerIterator = projectContainers.keySet().iterator();
-					while (containerIterator.hasNext()){
-						IPath containerPath = (IPath)containerIterator.next();
+					for (IPath containerPath : projectContainers.keySet()) {
 						if (containerPath.segment(0).equals(containerID)) { // registered container
 							projectContainers.put(containerPath, null); // reset container value, but leave entry in Map
 						}
@@ -999,7 +998,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	/*
 	 * Temporary cache of newly opened elements
 	 */
-	private ThreadLocal temporaryCache = new ThreadLocal();
+	private ThreadLocal<HashMap<IJavaScriptElement, Object>> temporaryCache = new ThreadLocal<HashMap<IJavaScriptElement, Object>>();
 
 	/**
 	 * Set of elements which are out of sync with their buffers.
@@ -1023,7 +1022,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 * Table from WorkingCopyOwner to a table of IJavaScriptUnit (working copy handle) to PerWorkingCopyInfo.
 	 * NOTE: this object itself is used as a lock to synchronize creation/removal of per working copy infos
 	 */
-	protected Map perWorkingCopyInfos = new HashMap(5);
+	protected Map/*<WorkingCopyOwner, Map<CompilationUnit, PerWorkingCopyInfo>>*/ perWorkingCopyInfos = new HashMap(5);
 
 	/**
 	 * A weak set of the known search scopes.
@@ -1041,11 +1040,11 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		public IIncludePathEntry[] resolvedClasspath;
 		public IJavaScriptModelStatus unresolvedEntryStatus;
 		public Map rootPathToRawEntries; // reverse map from a package fragment root's path to the raw entry
-		public Map rootPathToResolvedEntries; // map from a package fragment root's path to the resolved entry
+		public Map/*<IPath, IIncludePathEntry>*/ rootPathToResolvedEntries; // map from a package fragment root's path to the resolved entry
 		public IPath outputLocation;
 
 		public IEclipsePreferences preferences;
-		public Hashtable options;
+		public Hashtable/*<String, String>*/ options;
 		public Hashtable secondaryTypes;
 		public LRUCache javadocCache;
 
@@ -1061,16 +1060,15 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			IIncludePathEntry[] classpath = this.resolvedClasspath;
 			if (classpath == null) return;
 			IWorkspaceRoot wRoot = ResourcesPlugin.getWorkspace().getRoot();
-			Map externalTimeStamps = JavaModelManager.getJavaModelManager().deltaState.getExternalLibTimeStamps();
-			for (int i = 0, length = classpath.length; i < length; i++) {
-				IIncludePathEntry entry = classpath[i];
+			Map<IPath, Long> externalTimeStamps = JavaModelManager.getJavaModelManager().deltaState.getExternalLibTimeStamps();
+			for (IIncludePathEntry entry : classpath) {
 				if (entry.getEntryKind() == IIncludePathEntry.CPE_LIBRARY) {
 					IPath path = entry.getPath();
 					if (externalTimeStamps.get(path) == null) {
 						Object target = JavaModel.getTarget(wRoot, path, true);
 						if (target instanceof java.io.File) {
 							long timestamp = DeltaProcessor.getTimeStamp((java.io.File)target);
-							externalTimeStamps.put(path, new Long(timestamp));
+							externalTimeStamps.put(path, Long.valueOf(timestamp));
 						}
 					}
 				}
@@ -1250,7 +1248,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 * A cache of opened zip files per thread.
 	 * (for a given thread, the object value is a HashMap from IPath to java.io.ZipFile)
 	 */
-	private ThreadLocal zipFiles = new ThreadLocal();
+	private ThreadLocal<Map<IPath, ZipFile>> zipFiles = new ThreadLocal<Map<IPath, ZipFile>>();
 
 
 	/**
@@ -1334,7 +1332,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	/**
 	 * @deprecated
 	 */
-	private void addDeprecatedOptions(Hashtable options) {
+	private void addDeprecatedOptions(Hashtable<String, String> options) {
 		options.put(JavaScriptCore.COMPILER_PB_INVALID_IMPORT, JavaScriptCore.ERROR);
 		options.put(JavaScriptCore.COMPILER_PB_UNREACHABLE_CODE, JavaScriptCore.ERROR);
 	}
@@ -1345,7 +1343,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 */
 	public void cacheZipFiles() {
 		if (this.zipFiles.get() != null) return;
-		this.zipFiles.set(new HashMap());
+		this.zipFiles.set(new HashMap<IPath, ZipFile>());
 	}
 	public void closeZipFile(ZipFile zipFile) {
 		if (zipFile == null) return;
@@ -1368,6 +1366,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	public void configurePluginDebugOptions(){
 		if(JavaScriptCore.getPlugin().isDebugging()){
 			String option = Platform.getDebugOption(BUFFER_MANAGER_DEBUG);
+			// TODO wouldn't Boolean.parseBoolean work better?
 			if(option != null) BufferManager.VERBOSE = option.equalsIgnoreCase(TRUE) ;
 
 			option = Platform.getDebugOption(BUILDER_DEBUG);
@@ -1457,10 +1456,10 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		PerWorkingCopyInfo info = null;
 		synchronized(this.perWorkingCopyInfos) {
 			WorkingCopyOwner owner = workingCopy.owner;
-			Map workingCopyToInfos = (Map)this.perWorkingCopyInfos.get(owner);
+			Map<CompilationUnit, PerWorkingCopyInfo> workingCopyToInfos = (Map<CompilationUnit, PerWorkingCopyInfo>)this.perWorkingCopyInfos.get(owner);
 			if (workingCopyToInfos == null) return -1;
 
-			info = (PerWorkingCopyInfo)workingCopyToInfos.get(workingCopy);
+			info = workingCopyToInfos.get(workingCopy);
 			if (info == null) return -1;
 
 			if (--info.useCount == 0) {
@@ -1500,13 +1499,11 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 */
 	public void flushZipFiles() {
 		Thread currentThread = Thread.currentThread();
-		HashMap map = (HashMap)this.zipFiles.get();
+		Map<IPath, ZipFile> map = this.zipFiles.get();
 		if (map == null) return;
 		this.zipFiles.set(null);
-		Iterator iterator = map.values().iterator();
-		while (iterator.hasNext()) {
+		for (ZipFile zipFile : map.values()) {
 			try {
-				ZipFile zipFile = (ZipFile)iterator.next();
 				if (JavaModelManager.ZIP_ACCESS_VERBOSE) {
 					System.out.println("(" + currentThread + ") [JavaModelManager.flushZipFiles()] Closing ZipFile on " +zipFile.getName()); //$NON-NLS-1$//$NON-NLS-2$
 				}
@@ -1561,7 +1558,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 *  Returns the info for the element.
 	 */
 	public synchronized Object getInfo(IJavaScriptElement element) {
-		HashMap tempCache = (HashMap)this.temporaryCache.get();
+		HashMap<IJavaScriptElement, Object> tempCache = this.temporaryCache.get();
 		if (tempCache != null) {
 			Object result = tempCache.get(element);
 			if (result != null) {
@@ -1581,16 +1578,14 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	// If modified, also modify the method getDefaultOptionsNoInitialization()
 	public Hashtable getDefaultOptions(){
 
-		Hashtable defaultOptions = new Hashtable(10);
+		Hashtable<String, String> defaultOptions = new Hashtable<String, String>(10);
 
 		// see JavaCorePreferenceInitializer#initializeDefaultPluginPreferences() for changing default settings
 		// If modified, also modify the method getDefaultOptionsNoInitialization()
 		IEclipsePreferences defaultPreferences = getDefaultPreferences();
 
 		// initialize preferences to their default
-		Iterator iterator = this.optionNames.iterator();
-		while (iterator.hasNext()) {
-		    String propertyName = (String) iterator.next();
+		for (String propertyName : (HashSet<String>)this.optionNames) {
 		    String value = defaultPreferences.get(propertyName, null);
 		    if (value != null) defaultOptions.put(propertyName, value);
 		}
@@ -1670,19 +1665,17 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	public Hashtable getOptions() {
 
 		// return cached options if already computed
-		if (this.optionsCache != null) return new Hashtable(this.optionsCache);
+		if (this.optionsCache != null) return new Hashtable<String, String>(this.optionsCache);
 
 		if (!Platform.isRunning()) {
 			return this.optionsCache = getDefaultOptionsNoInitialization();
 		}
 		// init
-		Hashtable options = new Hashtable(10);
+		Hashtable<String, String> options = new Hashtable<String, String>(10);
 		IPreferencesService service = Platform.getPreferencesService();
 
 		// set options using preferences service lookup
-		Iterator iterator = optionNames.iterator();
-		while (iterator.hasNext()) {
-		    String propertyName = (String) iterator.next();
+		for (String propertyName : (HashSet<String>)this.optionNames) {
 		    String propertyValue = service.get(propertyName, null, this.preferencesLookup);
 		    if (propertyValue != null) {
 			    options.put(propertyName, propertyValue);
@@ -1696,15 +1689,15 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		addDeprecatedOptions(options);
 
 		// store built map in cache
-		this.optionsCache = new Hashtable(options);
+		this.optionsCache = new Hashtable<String, String>(options);
 
 		// return built map
 		return options;
 	}
 
 	// Do not modify without modifying getDefaultOptions()
-	private Hashtable getDefaultOptionsNoInitialization() {
-		Map defaultOptionsMap = new CompilerOptions().getMap(); // compiler defaults
+	private Hashtable<String, String> getDefaultOptionsNoInitialization() {
+		Map<String, String> defaultOptionsMap = new CompilerOptions().getMap(); // compiler defaults
 
 		/* START -------------------------------- Bug 203292 Type/Method/Filed resolution error configuration --------------------- */
 		/*
@@ -1769,7 +1762,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		// Time out for parameter names
 		defaultOptionsMap.put(JavaScriptCore.TIMEOUT_FOR_PARAMETER_NAME_FROM_ATTACHED_JAVADOC, "50"); //$NON-NLS-1$
 
-		return new Hashtable(defaultOptionsMap);
+		return new Hashtable<String, String>(defaultOptionsMap);
 	}
 
 	/*
@@ -1811,9 +1804,9 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	public PerWorkingCopyInfo getPerWorkingCopyInfo(CompilationUnit workingCopy,boolean create, boolean recordUsage, IProblemRequestor problemRequestor) {
 		synchronized(this.perWorkingCopyInfos) { // use the perWorkingCopyInfo collection as its own lock
 			WorkingCopyOwner owner = workingCopy.owner;
-			Map workingCopyToInfos = (Map)this.perWorkingCopyInfos.get(owner);
+			Map<CompilationUnit, PerWorkingCopyInfo> workingCopyToInfos = (Map<CompilationUnit, PerWorkingCopyInfo>)this.perWorkingCopyInfos.get(owner);
 			if (workingCopyToInfos == null && create) {
-				workingCopyToInfos = new HashMap();
+				workingCopyToInfos = new HashMap<CompilationUnit, PerWorkingCopyInfo>();
 				this.perWorkingCopyInfos.put(owner, workingCopyToInfos);
 			}
 
@@ -1833,9 +1826,9 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 * As such it should not be stored into container caches.
 	 */
 	public IJsGlobalScopeContainer getPreviousSessionContainer(IPath containerPath, IJavaScriptProject project) {
-			Map previousContainerValues = (Map)this.previousSessionContainers.get(project);
+			Map<IPath, IJsGlobalScopeContainer> previousContainerValues = (Map<IPath, IJsGlobalScopeContainer>)this.previousSessionContainers.get(project);
 			if (previousContainerValues != null){
-			    IJsGlobalScopeContainer previousContainer = (IJsGlobalScopeContainer)previousContainerValues.get(containerPath);
+			    IJsGlobalScopeContainer previousContainer = previousContainerValues.get(containerPath);
 			    if (previousContainer != null) {
 					if (JavaModelManager.CP_RESOLVE_VERBOSE_ADVANCED)
 						verbose_reentering_project_container_access(containerPath, project, previousContainer);
@@ -1892,9 +1885,9 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 * Creates it if not already created.
 	 */
 	public HashMap getTemporaryCache() {
-		HashMap result = (HashMap)this.temporaryCache.get();
+		HashMap<IJavaScriptElement, Object> result = this.temporaryCache.get();
 		if (result == null) {
-			result = new HashMap();
+			result = new HashMap<IJavaScriptElement, Object>();
 			this.temporaryCache.set(result);
 		}
 		return result;
@@ -1912,7 +1905,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		Plugin jdtCorePlugin = JavaScriptCore.getPlugin();
 		if (jdtCorePlugin == null) return null;
 
-		ArrayList variableList = new ArrayList(5);
+		ArrayList<String> variableList = new ArrayList<String>(5);
 		IExtensionPoint extension = Platform.getExtensionRegistry().getExtensionPoint(JavaScriptCore.PLUGIN_ID, JavaModelManager.CPVARIABLE_INITIALIZER_EXTPOINT_ID);
 		if (extension != null) {
 			IExtension[] extensions =  extension.getExtensions();
@@ -1937,7 +1930,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		Plugin jdtCorePlugin = JavaScriptCore.getPlugin();
 		if (jdtCorePlugin == null) return null;
 
-		ArrayList containerIDList = new ArrayList(5);
+		ArrayList<String> containerIDList = new ArrayList<String>(5);
 		IExtensionPoint extension = Platform.getExtensionRegistry().getExtensionPoint(JavaScriptCore.PLUGIN_ID, JavaModelManager.CPCONTAINER_INITIALIZER_EXTPOINT_ID);
 		if (extension != null) {
 			IExtension[] extensions =  extension.getExtensions();
@@ -1973,7 +1966,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			IJavaScriptUnit[] primaryWCs = addPrimary && owner != DefaultWorkingCopyOwner.PRIMARY
 				? getWorkingCopies(DefaultWorkingCopyOwner.PRIMARY, false)
 				: null;
-			Map workingCopyToInfos = (Map)this.perWorkingCopyInfos.get(owner);
+			Map<CompilationUnit, PerWorkingCopyInfo> workingCopyToInfos = (Map<CompilationUnit, PerWorkingCopyInfo>)this.perWorkingCopyInfos.get(owner);
 			if (workingCopyToInfos == null) return primaryWCs;
 			int primaryLength = primaryWCs == null ? 0 : primaryWCs.length;
 			int size = workingCopyToInfos.size(); // note size is > 0 otherwise pathToPerWorkingCopyInfos would be null
@@ -1989,9 +1982,9 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 				if (index != primaryLength)
 					System.arraycopy(result, 0, result = new IJavaScriptUnit[index+size], 0, index);
 			}
-			Iterator iterator = workingCopyToInfos.values().iterator();
+			Iterator<PerWorkingCopyInfo> iterator = workingCopyToInfos.values().iterator();
 			while(iterator.hasNext()) {
-				result[index++] = ((JavaModelManager.PerWorkingCopyInfo)iterator.next()).getWorkingCopy();
+				result[index++] = iterator.next().getWorkingCopy();
 			}
 			return result;
 		}
@@ -2017,10 +2010,10 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 */
 	public ZipFile getZipFile(IPath path) throws CoreException {
 
-		HashMap map;
+		Map<IPath, ZipFile> map;
 		ZipFile zipFile;
-		if ((map = (HashMap)this.zipFiles.get()) != null
-				&& (zipFile = (ZipFile)map.get(path)) != null) {
+		if ((map = this.zipFiles.get()) != null
+				&& (zipFile = map.get(path)) != null) {
 
 			return zipFile;
 		}
@@ -2071,21 +2064,17 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			verbose_batching_containers_initialization(javaProjectToInit, containerToInit);
 
 		// collect all container paths
-		final HashMap allContainerPaths = new HashMap();
-		IProject[] projects = ResourcesPlugin.getWorkspace().getRoot().getProjects();
-		for (int i = 0, length = projects.length; i < length; i++) {
-			IProject project = projects[i];
+		final HashMap<IJavaScriptProject, HashSet<IPath>> allContainerPaths = new HashMap<IJavaScriptProject, HashSet<IPath>>();
+		for (IProject project : ResourcesPlugin.getWorkspace().getRoot().getProjects()) {
 			if (!JavaProject.hasJavaNature(project)) continue;
 			IJavaScriptProject javaProject = new JavaProject(project, getJavaModel());
-			HashSet paths = (HashSet) allContainerPaths.get(javaProject);
-			IIncludePathEntry[] rawClasspath = javaProject.getRawIncludepath();
-			for (int j = 0, length2 = rawClasspath.length; j < length2; j++) {
-				IIncludePathEntry entry = rawClasspath[j];
+			HashSet<IPath> paths = allContainerPaths.get(javaProject);
+			for (IIncludePathEntry entry : javaProject.getRawIncludepath()) {
 				IPath path = entry.getPath();
 				if (entry.getEntryKind() == IIncludePathEntry.CPE_CONTAINER
 						&& containerGet(javaProject, path) == null) {
 					if (paths == null) {
-						paths = new HashSet();
+						paths = new HashSet<IPath>();
 						allContainerPaths.put(javaProject, paths);
 					}
 					paths.add(path);
@@ -2106,9 +2095,9 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			*/
 		}
 		// TODO (frederic) remove following block when JDT/UI dummy project will be thrown away...
-		HashSet containerPaths = (HashSet) allContainerPaths.get(javaProjectToInit);
+		HashSet<IPath> containerPaths = allContainerPaths.get(javaProjectToInit);
 		if (containerPaths == null) {
-			containerPaths = new HashSet();
+			containerPaths = new HashSet<IPath>();
 			allContainerPaths.put(javaProjectToInit, containerPaths);
 		}
 		containerPaths.add(containerToInit);
@@ -2125,22 +2114,17 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 				new IWorkspaceRunnable() {
 					public void run(IProgressMonitor monitor) throws CoreException {
 						try {
-							Set entrySet = allContainerPaths.entrySet();
-							int length = entrySet.size();
+							int length = allContainerPaths.size();
 							if (monitor != null)
 								monitor.beginTask("", length); //$NON-NLS-1$
-							Map.Entry[] entries = new Map.Entry[length]; // clone as the following will have a side effect
-							entrySet.toArray(entries);
-							for (int i = 0; i < length; i++) {
-								Map.Entry entry = entries[i];
-								IJavaScriptProject javaProject = (IJavaScriptProject) entry.getKey();
-								HashSet pathSet = (HashSet) entry.getValue();
+							for (Entry<IJavaScriptProject, HashSet<IPath>> entry : allContainerPaths.entrySet()) {
+								IJavaScriptProject javaProject = entry.getKey();
+								HashSet<IPath> pathSet = entry.getValue();
 								if (pathSet == null) continue;
 								int length2 = pathSet.size();
 								IPath[] paths = new IPath[length2];
 								pathSet.toArray(paths); // clone as the following will have a side effect
-								for (int j = 0; j < length2; j++) {
-									IPath path = paths[j];
+								for (IPath path : paths) {
 									initializeContainer(javaProject, path);
 								}
 								if (monitor != null)
@@ -2376,7 +2360,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 
 	public synchronized String intern(String s) {
 		// make sure to copy the string (so that it doesn't hold on the underlying char[] that might be much bigger than necessary)
-		return (String) this.stringSymbols.add(new String(s));
+		return (String) this.stringSymbols.add(s);
 
 		// Note1: String#intern() cannot be used as on some VMs this prevents the string from being garbage collected
 		// Note 2: Instead of using a WeakHashset, one could use a WeakHashMap with the following implementation
@@ -2392,10 +2376,10 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		*/
 	}
 
-	private HashSet getClasspathBeingResolved() {
-	    HashSet result = (HashSet) this.classpathsBeingResolved.get();
+	private HashSet<IJavaScriptProject> getClasspathBeingResolved() {
+	    HashSet<IJavaScriptProject> result = this.classpathsBeingResolved.get();
 	    if (result == null) {
-	        result = new HashSet();
+	        result = new HashSet<IJavaScriptProject>();
 	        this.classpathsBeingResolved.set(result);
 	    }
 	    return result;
@@ -2638,7 +2622,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		private IIncludePathEntry[] allClasspathEntries;
 		private int allClasspathEntryCount;
 
-		private final Map allPaths; // String -> IPath
+		private final Map<String, IPath> allPaths;
 
 		private String[] allStrings;
 		private int allStringsCount;
@@ -2649,7 +2633,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 			super();
 			this.allClasspathEntries = null;
 			this.allClasspathEntryCount = 0;
-			this.allPaths = new HashMap();
+			this.allPaths = new HashMap<String, IPath>();
 			this.allStrings = null;
 			this.allStringsCount = 0;
 			this.in = in;
@@ -2776,10 +2760,10 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 
 				JavaModelManager.this.containerPut(project, path, container);
 
-				Map oldContainers = (Map) JavaModelManager.this.previousSessionContainers.get(project);
+				Map<IPath, IJsGlobalScopeContainer> oldContainers = (Map<IPath, IJsGlobalScopeContainer>) JavaModelManager.this.previousSessionContainers.get(project);
 
 				if (oldContainers == null) {
-					oldContainers = new HashMap();
+					oldContainers = new HashMap<IPath, IJsGlobalScopeContainer>();
 					JavaModelManager.this.previousSessionContainers.put(project, oldContainers);
 				}
 
@@ -2796,7 +2780,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 				return null;
 
 			String portableString = loadString();
-			IPath path = (IPath) this.allPaths.get(portableString);
+			IPath path = this.allPaths.get(portableString);
 
 			if (path == null) {
 				path = Path.fromPortableString(portableString);
@@ -2855,7 +2839,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 
 		private void loadVariables() throws IOException {
 			int size = loadInt();
-			Map loadedVars = new HashMap(size);
+			Map<String, IPath> loadedVars = new HashMap<String, IPath>(size);
 
 			for (int i = 0; i < size; ++i) {
 				String varName = loadString();
@@ -2875,7 +2859,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 	 *  disturbing the cache ordering.
 	 */
 	protected synchronized Object peekAtInfo(IJavaScriptElement element) {
-		HashMap tempCache = (HashMap)this.temporaryCache.get();
+		HashMap<IJavaScriptElement, Object> tempCache = this.temporaryCache.get();
 		if (tempCache != null) {
 			Object result = tempCache.get(element);
 			if (result != null) {
@@ -2923,9 +2907,8 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		// Subsequent resolution against package in the jar would fail as a result.
 		// https://bugs.eclipse.org/bugs/show_bug.cgi?id=102422
 		// (theodora)
-		for(Iterator it = newElements.entrySet().iterator(); it.hasNext(); ) {
-			Map.Entry entry = (Map.Entry)it.next();
-			IJavaScriptElement element = (IJavaScriptElement)entry.getKey();
+		for(Entry<IJavaScriptElement, Object> entry : ((Map<IJavaScriptElement, Object>)newElements).entrySet()) {
+			IJavaScriptElement element = entry.getKey();
 //			if( element instanceof JarPackageFragmentRoot || element instanceof LibraryFragmentRoot ){
 //				Object info = entry.getValue();
 //				it.remove();
@@ -2933,10 +2916,8 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 //			}
 		}
 
-		Iterator iterator = newElements.entrySet().iterator();
-		while (iterator.hasNext()) {
-			Map.Entry entry = (Map.Entry) iterator.next();
-			this.cache.putInfo((IJavaScriptElement) entry.getKey(), entry.getValue());
+		for(Entry<IJavaScriptElement, Object> entry : ((Map<IJavaScriptElement, Object>)newElements).entrySet()) {
+			this.cache.putInfo(entry.getKey(), entry.getValue());
 		}
 	}
 
@@ -3532,8 +3513,8 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 
 	private void traceVariableAndContainers(String action, long start) {
 
-		Long delta = new Long(System.currentTimeMillis() - start);
-		Long length = new Long(getVariableAndContainersFile().length());
+		Long delta = Long.valueOf(System.currentTimeMillis() - start);
+		Long length = Long.valueOf(getVariableAndContainersFile().length());
 		String pattern = "{0} {1} bytes in variablesAndContainers.dat in {2}ms"; //$NON-NLS-1$
 		String message = MessageFormat.format(pattern, new Object[]{action, length, delta});
 
@@ -3968,7 +3949,7 @@ public class JavaModelManager implements ISaveParticipant, IContentTypeChangeLis
 		while (packages.hasNext()) {
 			Map.Entry entry = (Map.Entry) packages.next();
 			String packName = (String) entry.getKey();
-			if (packName != INDEXED_SECONDARY_TYPES) { // skip indexing cache entry if present (!= is intentional)
+			if (! INDEXED_SECONDARY_TYPES.equals(packName)) { // skip indexing cache entry if present (!= is intentional)
 				HashMap types = (HashMap) entry.getValue();
 				Set nameEntries = types.entrySet();
 				int namesSize = nameEntries.size(), removedNamesCount = 0;

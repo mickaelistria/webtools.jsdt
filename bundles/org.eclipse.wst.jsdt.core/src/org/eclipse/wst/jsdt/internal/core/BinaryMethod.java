@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -235,7 +236,7 @@ public String[] getParameterNames() throws JavaScriptModelException {
 				}
 			}
 			javadocContents = nameCollector.getJavadoc();
-		} else if (javadocContents != BinaryType.EMPTY_JAVADOC){
+		} else if (!BinaryType.EMPTY_JAVADOC.equals(javadocContents)){
 			// need to extract the part relative to the binary method since javadoc contains the javadoc for the declaring type
 			try {
 				javadocContents = extractJavadoc(declaringType, javadocContents);
@@ -254,7 +255,7 @@ public String[] getParameterNames() throws JavaScriptModelException {
 			}
 			return getRawParameterNames(paramCount);
 		}
-		if (javadocContents != null && javadocContents != BinaryType.EMPTY_JAVADOC) {
+		if (javadocContents != null && ! BinaryType.EMPTY_JAVADOC.equals(javadocContents)) {
 			final int indexOfOpenParen = javadocContents.indexOf('(');
 			if (indexOfOpenParen != -1) {
 				final int indexOfClosingParen = javadocContents.indexOf(')', indexOfOpenParen);
@@ -542,7 +543,7 @@ private String extractJavadoc(IType declaringType, String contents) throws JavaS
 				buffer.insert(0, '.');
 			}
 		}
-		typeQualifiedName = new String(buffer.toString());
+		typeQualifiedName = buffer.toString();
 	} else {
 		typeQualifiedName = declaringType.getElementName();
 	}

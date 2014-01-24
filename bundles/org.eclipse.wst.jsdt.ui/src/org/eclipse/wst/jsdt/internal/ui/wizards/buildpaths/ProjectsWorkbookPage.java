@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.wizards.buildpaths;
 
@@ -97,12 +98,12 @@ public class ProjectsWorkbookPage extends BuildPathBasePage {
 		
 	private void updateProjectsList(IJavaScriptProject currJProject) {
 		// add the projects-cpentries that are already on the class path
-		List cpelements= fClassPathList.getElements();
+		List<CPListElement> cpelements= fClassPathList.getElements();
 		
-		final List checkedProjects= new ArrayList(cpelements.size());
+		final List<CPListElement> checkedProjects= new ArrayList<CPListElement>(cpelements.size());
 		
 		for (int i= cpelements.size() - 1 ; i >= 0; i--) {
-			CPListElement cpelem= (CPListElement)cpelements.get(i);
+			CPListElement cpelem= cpelements.get(i);
 			if (isEntryKind(cpelem.getEntryKind())) {
 				checkedProjects.add(cpelem);
 			}
@@ -129,13 +130,13 @@ public class ProjectsWorkbookPage extends BuildPathBasePage {
 	}
 		
 	private void updateClasspathList() {
-		List projelements= fProjectsList.getElements();
+		List<CPListElement> projelements= fProjectsList.getElements();
 		
 		boolean remove= false;
-		List cpelements= fClassPathList.getElements();
+		List<CPListElement> cpelements= fClassPathList.getElements();
 		// backwards, as entries will be deleted
 		for (int i= cpelements.size() -1; i >= 0 ; i--) {
-			CPListElement cpe= (CPListElement)cpelements.get(i);
+			CPListElement cpe= cpelements.get(i);
 			if (isEntryKind(cpe.getEntryKind())) {
 				if (!projelements.remove(cpe)) {
 					cpelements.remove(i);
@@ -240,8 +241,8 @@ public class ProjectsWorkbookPage extends BuildPathBasePage {
 		if (entries != null) {
 			int nElementsChosen= entries.length;					
 			// remove duplicates
-			List cplist= fProjectsList.getElements();
-			List elementsToAdd= new ArrayList(nElementsChosen);
+			List<CPListElement> cplist= fProjectsList.getElements();
+			List<CPListElement> elementsToAdd= new ArrayList(nElementsChosen);
 			for (int i= 0; i < nElementsChosen; i++) {
 				CPListElement curr= entries[i];
 				if (!cplist.contains(curr) && !elementsToAdd.contains(curr)) {
@@ -368,7 +369,7 @@ public class ProjectsWorkbookPage extends BuildPathBasePage {
 		int res= dialog.open();
 		if (res == Window.OK || res == AccessRulesDialog.SWITCH_PAGE) {
 			selElement.setAttribute(CPListElement.ACCESSRULES, dialog.getAccessRules());
-			selElement.setAttribute(CPListElement.COMBINE_ACCESSRULES, new Boolean(dialog.doCombineAccessRules()));
+			selElement.setAttribute(CPListElement.COMBINE_ACCESSRULES, Boolean.valueOf(dialog.doCombineAccessRules()));
 			fProjectsList.refresh();
 			fClassPathList.dialogFieldChanged(); // validate
 			
@@ -399,13 +400,11 @@ public class ProjectsWorkbookPage extends BuildPathBasePage {
 	private CPListElement[] openProjectDialog(CPListElement elem) {
 		
 		try {
-			ArrayList selectable= new ArrayList();
+			ArrayList<IJavaScriptProject> selectable= new ArrayList<IJavaScriptProject>();
 			selectable.addAll(Arrays.asList(fCurrJProject.getJavaScriptModel().getJavaScriptProjects()));
 			selectable.remove(fCurrJProject);
 			
-			List elements= fProjectsList.getElements();
-			for (int i= 0; i < elements.size(); i++) {
-				CPListElement curr= (CPListElement) elements.get(0);
+			for (CPListElement curr : (List<CPListElement>)fProjectsList.getElements()) {
 				IJavaScriptProject proj= (IJavaScriptProject) JavaScriptCore.create(curr.getResource());
 				selectable.remove(proj);
 			}

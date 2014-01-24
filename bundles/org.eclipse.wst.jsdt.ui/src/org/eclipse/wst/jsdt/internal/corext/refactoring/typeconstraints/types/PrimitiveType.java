@@ -60,6 +60,11 @@ public final class PrimitiveType extends TType {
 	protected boolean doEquals(TType type) {
 		return fId == ((PrimitiveType)type).fId;
 	}
+	
+	@Override
+	public int hashCode() {
+		return this.fId;
+	}
 
 	protected boolean doCanAssignTo(TType lhs) {
 		if (lhs.getKind() != PRIMITIVE_TYPE) {

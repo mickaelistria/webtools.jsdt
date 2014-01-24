@@ -464,7 +464,7 @@ public final class JavaScriptConventions {
 				}
 		}
 		IWorkspace workspace = ResourcesPlugin.getWorkspace();
-		IStatus status = workspace.validateName(new String(name), IResource.FOLDER);
+		IStatus status = workspace.validateName(name, IResource.FOLDER);
 		if (!status.isOK()) {
 			return status;
 		}
@@ -478,7 +478,7 @@ public final class JavaScriptConventions {
 			if (scannedID == null) {
 				return new Status(IStatus.WARNING, JavaScriptCore.PLUGIN_ID, -1, Messages.bind(Messages.convention_illegalIdentifier, typeName), null);
 			}
-			status = workspace.validateName(new String(name), IResource.FOLDER);
+			status = workspace.validateName(name, IResource.FOLDER);
 			if (!status.isOK()) {
 				return status;
 			}

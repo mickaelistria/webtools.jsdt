@@ -34,6 +34,7 @@ public boolean equals(Object o) {
 	if (!(o instanceof SourceField)) return false;
 	return super.equals(o);
 }
+
 public ASTNode findNode(org.eclipse.wst.jsdt.core.dom.JavaScriptUnit ast) {
 	// For field declarations, a variable declaration fragment is returned
 	// Return the FieldDeclaration instead

@@ -387,6 +387,11 @@ public class MetadataFile extends Openable implements
 		MetadataFile other = (MetadataFile) o;
 		return this.name.equals(other.name) && this.parent.equals(other.parent);
 	}
+	
+	@Override
+	public int hashCode() {
+		return this.name.hashCode() ^ this.parent.hashCode();
+	}
  
 	 
 }

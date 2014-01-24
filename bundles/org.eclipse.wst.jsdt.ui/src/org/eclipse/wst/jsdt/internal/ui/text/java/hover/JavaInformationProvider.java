@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.text.java.hover;
 
@@ -136,7 +137,7 @@ public class JavaInformationProvider implements IInformationProvider, IInformati
 			if (perspective != null)  {
 				String perspectiveId= perspective.getId();
 
-				if (fCurrentPerspective == null || fCurrentPerspective != perspectiveId) {
+				if (fCurrentPerspective == null || fCurrentPerspective.equals(perspectiveId)) {
 					fCurrentPerspective= perspectiveId;
 
 					fImplementation= new JavaTypeHover();

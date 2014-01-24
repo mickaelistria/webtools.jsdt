@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2002, 2013 IBM Corporation and others.
+ * Copyright (c) 2002, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.formatter;
 
@@ -195,52 +196,52 @@ public class CodeFormatterVisitor extends ASTVisitor {
 		switch((binaryExpression.bits & ASTNode.OperatorMASK) >> ASTNode.OperatorSHIFT) {
 			case OperatorIds.MULTIPLY :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameMULTIPLY));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameMULTIPLY));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.PLUS :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNamePLUS));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNamePLUS));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.DIVIDE :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameDIVIDE));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameDIVIDE));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.REMAINDER :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameREMAINDER));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameREMAINDER));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.XOR :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameXOR));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameXOR));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.MINUS :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameMINUS));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameMINUS));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.OR :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameOR));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameOR));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.AND :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameAND));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameAND));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.AND_AND :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameAND_AND));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameAND_AND));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 			case OperatorIds.OR_OR :
 				binaryExpression.left.traverse(builder, scope);
-				builder.operatorsList.add(new Integer(TerminalTokens.TokenNameOR_OR));
+				builder.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameOR_OR));
 				binaryExpression.right.traverse(builder, scope);
 				break;
 		}

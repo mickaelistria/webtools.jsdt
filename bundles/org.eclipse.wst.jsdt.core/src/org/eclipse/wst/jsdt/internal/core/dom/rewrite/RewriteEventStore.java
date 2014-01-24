@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.dom.rewrite;
 
@@ -134,6 +135,16 @@ public final class RewriteEventStore {
 			}
 			return 0;
 		}
+		
+		@Override
+		public boolean equals(Object o) {
+			return o != null && o instanceof CopySourceInfo && compareTo(o) == 0;
+		}
+		
+		@Override
+		public int hashCode() {
+			return this.getNode().getStartPosition() * 2 + (this.isMove ? 1 : 0);
+		}
 
 		public String toString() {
 			StringBuffer buf= new StringBuffer();
@@ -193,6 +204,16 @@ public final class RewriteEventStore {
 				return this.isMove() ? -1 : 1; // first move then copy
 			}
 			return 0;
+		}
+		
+		@Override
+		public boolean equals(Object o) {
+			return o != null && o instanceof NodeRangeInfo && compareTo(o) == 0;
+		}
+		
+		@Override
+		public int hashCode() {
+			return this.getStartNode().getStartPosition() << 17 + this.getEndNode().getStartPosition() << 1 + (this.isMove() ? 1 : 0);
 		}
 
 		public void updatePlaceholderSourceRanges(TargetSourceRangeComputer sourceRangeComputer) {

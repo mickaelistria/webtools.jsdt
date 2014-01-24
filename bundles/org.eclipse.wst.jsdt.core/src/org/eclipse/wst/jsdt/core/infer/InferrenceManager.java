@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2013 IBM Corporation and others.
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,11 +7,11 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.core.infer;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
@@ -65,19 +65,19 @@ public class InferrenceManager {
 		{
 			loadInferenceExtensions();
 		}
-		ArrayList extProviders=new ArrayList();
+		ArrayList<InferrenceProvider> extProviders=new ArrayList<InferrenceProvider>();
 		extProviders.add(new DefaultInferrenceProvider());
 		for (int i = 0; i < extensions.length; i++) {
 			  if (extensions[i].inferProvider!=null)
 				  extProviders.add(extensions[i].inferProvider);
 			}
-		return (InferrenceProvider [] )extProviders.toArray(new InferrenceProvider[extProviders.size()]);
+		return extProviders.toArray(new InferrenceProvider[extProviders.size()]);
 	}
 
 
 	public InferrenceProvider [] getInferenceProviders(IInferenceFile script)
 	{
-		List proposedProviders = new ArrayList();
+		List<InferrenceProvider> proposedProviders = new ArrayList<InferrenceProvider>();
 		InferrenceProvider[] inferenceProviders = getInferenceProviders();
 
 		if (inferenceProviders.length==1)
@@ -110,21 +110,22 @@ public class InferrenceManager {
 				case InferrenceProvider.ONLY_THIS:
 					proposedProviders.clear();
 					proposedProviders.add(inferenceProviders[i]);
-					return (InferrenceProvider [] )proposedProviders.toArray(new InferrenceProvider[proposedProviders.size()]);
+					return proposedProviders.toArray(new InferrenceProvider[proposedProviders.size()]);
 
 				default:
 					break;
 			}
 		}
 		if (_debugInfer){
-			String proposedProvidersString = "";			
-			Iterator providers = proposedProviders.iterator();
-			while(providers.hasNext())			
-				proposedProvidersString += ((InferrenceProvider)providers.next()).getID().toString()+", ";			
+			StringBuilder proposedProvidersString = new StringBuilder();			
+			for (InferrenceProvider provider : proposedProviders) {
+				proposedProvidersString.append(provider.getID());
+				proposedProvidersString.append(", "); //$NON-NLS-1$
+			}
 			Logger.log(Logger.INFO_DEBUG, "Proposed Inference Providers: " + proposedProvidersString);
 		}
 	
-		return (InferrenceProvider [] )proposedProviders.toArray(new InferrenceProvider[proposedProviders.size()]);
+		return proposedProviders.toArray(new InferrenceProvider[proposedProviders.size()]);
 	}
 	
 	/**
@@ -136,18 +137,18 @@ public class InferrenceManager {
 	 */
 	public IInferEngine [] getInferenceEngines(CompilationUnitDeclaration script)
 	{
-		List proposedEngines = new ArrayList();
+		List<IInferEngine> proposedEngines = new ArrayList<IInferEngine>();
 		InferrenceProvider[] inferenceProviders = getInferenceProviders(script);
 		
 		for (int i = 0; i < inferenceProviders.length; i++) {
 			  proposedEngines.add(inferenceProviders[i].getInferEngine()) ;
 		}
-		return (IInferEngine [] )proposedEngines.toArray(new IInferEngine[proposedEngines.size()]);
+		return proposedEngines.toArray(new IInferEngine[proposedEngines.size()]);
 	}
 	
 	protected void loadInferenceExtensions() {
 		IExtensionRegistry registry = Platform.getExtensionRegistry();
-		ArrayList extList = new ArrayList();
+		ArrayList<InferrenceSupportExtension> extList = new ArrayList<InferrenceSupportExtension>();
 		if (registry != null) {
 			IExtensionPoint point = registry.getExtensionPoint(
 					JavaScriptCore.PLUGIN_ID, EXTENSION_POINT);
@@ -176,8 +177,7 @@ public class InferrenceManager {
 			}
 		}
 
-		this.extensions = (InferrenceSupportExtension[]) extList
-				.toArray(new InferrenceSupportExtension[extList.size()]);
+		this.extensions = extList.toArray(new InferrenceSupportExtension[extList.size()]);
 	}
 
 

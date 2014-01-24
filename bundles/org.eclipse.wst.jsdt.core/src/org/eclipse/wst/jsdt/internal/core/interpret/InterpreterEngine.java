@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2011 IBM Corporation and others.
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.interpret;
 
@@ -81,7 +82,7 @@ public class InterpreterEngine extends ASTVisitor implements Contants{
 			case Value.NUMBER:
 				return value;
 			case Value.STRING:
-				return Integer.valueOf((String)objValue).intValue();
+				return Integer.parseInt((String)objValue);
 			default:
 				throw new UnimplementedException();
 			}
@@ -352,10 +353,10 @@ public class InterpreterEngine extends ASTVisitor implements Contants{
 		
     	switch (postfixExpression.operator) {
 		case OperatorIds.PLUS :
-			number++; //$NON-NLS-1$
+			number++;
 			break;
 		case OperatorIds.MINUS :
-			number++; //$NON-NLS-1$
+			number++;
 			break;
 	} 
     	Value newValue = new NumberValue(number);
@@ -373,10 +374,10 @@ public class InterpreterEngine extends ASTVisitor implements Contants{
 		
     	switch (prefixExpression.operator) {
 		case OperatorIds.PLUS :
-			number++; //$NON-NLS-1$
+			number++;
 			break;
 		case OperatorIds.MINUS :
-			number++; //$NON-NLS-1$
+			number++;
 			break;
 	} 
     	Value newValue = new NumberValue(number);
@@ -446,7 +447,7 @@ public class InterpreterEngine extends ASTVisitor implements Contants{
 	
 	
 	public boolean visit(IntLiteral intLiteral, BlockScope scope) {
-		int value=(intLiteral.source==null)? intLiteral.value : Integer.valueOf(new String(intLiteral.source)).intValue();
+		int value=(intLiteral.source==null)? intLiteral.value : Integer.parseInt(new String(intLiteral.source));
 		pushNumber(value);
 		return true;
 	} 

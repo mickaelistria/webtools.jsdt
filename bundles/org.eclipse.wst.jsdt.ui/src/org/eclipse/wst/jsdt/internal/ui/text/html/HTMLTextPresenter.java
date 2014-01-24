@@ -9,6 +9,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.text.html;
 
@@ -169,10 +170,9 @@ public class HTMLTextPresenter implements DefaultInformationControl.IInformation
 		int yoursEnd=   offset + insertLength -1;
 		yoursEnd= Math.max(yoursStart, yoursEnd);
 
-		Iterator e= presentation.getAllStyleRangeIterator();
+		Iterator<StyleRange> e= presentation.getAllStyleRangeIterator();
 		while (e.hasNext()) {
-
-			StyleRange range= (StyleRange) e.next();
+			StyleRange range= e.next();
 
 			int myStart= range.start;
 			int myEnd=   range.start + range.length -1;
@@ -228,7 +228,7 @@ public class HTMLTextPresenter implements DefaultInformationControl.IInformation
 		try {
 
 			StringBuffer buffer= new StringBuffer();
-			int maxNumberOfLines= Math.round(maxHeight / gc.getFontMetrics().getHeight());
+			int maxNumberOfLines= Math.round((float)maxHeight / gc.getFontMetrics().getHeight());
 
 			fCounter= 0;
 			LineBreakingReader reader= new LineBreakingReader(createReader(hoverInfo, presentation), gc, maxWidth);

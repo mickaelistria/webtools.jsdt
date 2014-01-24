@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2008 IBM Corporation and others.
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 /**
  *
@@ -126,9 +127,9 @@ public class LibrarySuperType {
 			}
 			return  init.getDescription(cpEntry, javaProject);
 		}
-		Object parent = getParent();
-		if(!(parent instanceof LibrarySuperType)) return null;
-		return ((LibrarySuperType)parent).getLibraryName();
+		LibrarySuperType parent = getParent();
+		if (parent == null) return null;
+		return parent.getLibraryName();
 	}
 
 	public String toString() {
@@ -164,20 +165,25 @@ public class LibrarySuperType {
 
 		return false;
 	}
+	
+	@Override
+	public int hashCode() {
+		int hash = 0;
+		if (this.cpEntry != null) hash ^= this.cpEntry.hashCode();
+		if (this.superTypeName != null) hash ^= this.superTypeName.hashCode();
+		return hash;		
+	}
 
 	public IPackageFragment[] getPackageFragments(){
-		IIncludePathEntry[] entries = getClasspathEntries();
-		ArrayList allFrags = new ArrayList();
+		ArrayList<IPackageFragment> allFrags = new ArrayList<IPackageFragment>();
 
 		try {
-			for(int i = 0;i<entries.length;i++) {
-				IPath path = entries[i].getPath();
+			for(IIncludePathEntry classpathEntry : getClasspathEntries()) {
+				IPath path = classpathEntry.getPath();
 				IPackageFragmentRoot root = javaProject.findPackageFragmentRoot(path.makeAbsolute());
-
-				IJavaScriptElement[] children = root.getChildren();
-				for(int k = 0;k<children.length;k++) {
-					if(children[k] instanceof IPackageFragment) {
-						allFrags.add(children[k]);
+				for(IJavaScriptElement child : root.getChildren()) {
+					if(child instanceof IPackageFragment) {
+						allFrags.add((IPackageFragment)child);
 					}
 				}
 			}
@@ -185,7 +191,7 @@ public class LibrarySuperType {
 			// TODO Auto-generated catch block
 			ex.printStackTrace();
 		}
-		return (IPackageFragment[])allFrags.toArray(new IPackageFragment[allFrags.size()]);
+		return allFrags.toArray(new IPackageFragment[allFrags.size()]);
 	}
 
 	public static JsGlobalScopeContainerInitializer getContainerInitializer(IPath classPathEntry) {

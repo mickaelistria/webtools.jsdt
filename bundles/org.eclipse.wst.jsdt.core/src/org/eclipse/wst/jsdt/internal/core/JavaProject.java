@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -389,11 +390,11 @@ public class JavaProject
 		int length = rscProjects.length;
 		JavaProject[] projects = new JavaProject[length];
 
-		HashSet cycleParticipants = new HashSet();
-		HashSet traversed = new HashSet();
+		HashSet<IPath> cycleParticipants = new HashSet<IPath>();
+		HashSet<IPath> traversed = new HashSet<IPath>();
 
 		// compute cycle participants
-		ArrayList prereqChain = new ArrayList();
+		ArrayList<IPath> prereqChain = new ArrayList<IPath>();
 		for (int i = 0; i < length; i++){
 			if (hasJavaNature(rscProjects[i])) {
 				JavaProject project = (projects[i] = (JavaProject)JavaScriptCore.create(rscProjects[i]));
@@ -405,8 +406,7 @@ public class JavaProject
 		}
 		//System.out.println("updateAllCycleMarkers: " + (System.currentTimeMillis() - start) + " ms");
 
-		for (int i = 0; i < length; i++){
-			JavaProject project = projects[i];
+		for (JavaProject project : projects){
 			if (project != null) {
 				if (cycleParticipants.contains(project.getPath())){
 					IMarker cycleMarker = project.getCycleMarker();
@@ -521,7 +521,7 @@ public class JavaProject
 	 */
 	private void computeExpandedClasspath(
 		ClasspathEntry referringEntry,
-		HashSet rootIDs,
+		HashSet<String> rootIDs,
 		ObjectVector accumulatedEntries) throws JavaScriptModelException {
 
 		String projectRootId = this.rootID();
@@ -903,13 +903,13 @@ public class JavaProject
 				},
 				new Object[] {
 					status.getMessage(),
-					new Integer(severity),
+					Integer.valueOf(severity),
 					Messages.classpath_buildPath,
 					isCycleProblem ? "true" : "false",//$NON-NLS-1$ //$NON-NLS-2$
 					isClasspathFileFormatProblem ? "true" : "false",//$NON-NLS-1$ //$NON-NLS-2$
-					new Integer(status.getCode()),
+					Integer.valueOf(status.getCode()),
 					Util.getProblemArgumentsForMarker(arguments) ,
-					new Integer(CategorizedProblem.CAT_BUILDPATH),
+					Integer.valueOf(CategorizedProblem.CAT_BUILDPATH),
 					JavaBuilder.SOURCE_ID,
 				}
 			);
@@ -933,7 +933,7 @@ public class JavaProject
 	 */
 	public IIncludePathEntry[] decodeClasspath(String xmlClasspath, Map unknownElements) throws IOException, AssertionFailedException {
 
-		ArrayList paths = new ArrayList();
+		ArrayList<IIncludePathEntry> paths = new ArrayList<IIncludePathEntry>();
 		IIncludePathEntry defaultOutput = null;
 		StringReader reader = new StringReader(xmlClasspath);
 		Element cpElement;
@@ -1034,7 +1034,7 @@ public class JavaProject
 	 */
 	protected IPath defaultOutputLocation() {
 		// https://bugs.eclipse.org/bugs/show_bug.cgi?id=272495
-		return this.project.getFullPath(); //$NON-NLS-1$
+		return this.project.getFullPath();
 	}
 
 	/**
@@ -1054,7 +1054,7 @@ public class JavaProject
 			if (outputLocation != null) {
 				outputLocation = outputLocation.removeFirstSegments(1);
 				outputLocation = outputLocation.makeRelative();
-				HashMap parameters = new HashMap();
+				HashMap<String, String> parameters = new HashMap<String, String>();
 				parameters.put(ClasspathEntry.TAG_KIND, ClasspathEntry.kindToString(ClasspathEntry.K_OUTPUT));
 				parameters.put(ClasspathEntry.TAG_PATH, String.valueOf(outputLocation));
 				xmlWriter.printTag(ClasspathEntry.TAG_CLASSPATHENTRY, parameters, indent, true, true);
@@ -1354,7 +1354,7 @@ public class JavaProject
 		else if (answer.type==null && answer.element!=null && answer.element.getClass().isArray())
 		{
 			Object[] elements = (Object[]) answer.element;
-			List iTypes = new ArrayList(elements.length);
+			List<IType> iTypes = new ArrayList<IType>(elements.length);
 			for (int i = 0; i < elements.length; i++) {
 				// could be a binding instead
 				if (elements[i] instanceof ITypeRoot) {
@@ -1364,7 +1364,7 @@ public class JavaProject
 					}
 				}
 			}
-			return (IType[]) iTypes.toArray(new IType[iTypes.size()]);
+			return iTypes.toArray(new IType[iTypes.size()]);
 		}
 		if (answer.type != null && answer.type.exists()) {
 			return new IType[]{answer.type};
@@ -1522,10 +1522,10 @@ public class JavaProject
 		PerProjectInfo perProjectInfo = getPerProjectInfo();
 		if (perProjectInfo == null)
 			return null;
-		Map rootPathToResolvedEntries = perProjectInfo.rootPathToResolvedEntries;
+		Map<IPath, IIncludePathEntry> rootPathToResolvedEntries = perProjectInfo.rootPathToResolvedEntries;
 		if (rootPathToResolvedEntries == null)
 			return null;
-		return (IIncludePathEntry) rootPathToResolvedEntries.get(path);
+		return rootPathToResolvedEntries.get(path);
 	}
 
 	/*
@@ -1626,7 +1626,7 @@ public class JavaProject
 	public IIncludePathEntry[] getExpandedClasspath()	throws JavaScriptModelException {
 
 			ObjectVector accumulatedEntries = new ObjectVector();
-			computeExpandedClasspath(null, new HashSet(5), accumulatedEntries);
+			computeExpandedClasspath(null, new HashSet<String>(5), accumulatedEntries);
 
 			IIncludePathEntry[] expandedPath = new IIncludePathEntry[accumulatedEntries.size()];
 			accumulatedEntries.copyInto(expandedPath);
@@ -1652,18 +1652,18 @@ public class JavaProject
 	public IJavaScriptElement getHandleFromMemento(String token, MementoTokenizer memento, WorkingCopyOwner owner) {
 		switch (token.charAt(0)) {
 			case JEM_PACKAGEFRAGMENTROOT:
-				String rootPath = IPackageFragmentRoot.DEFAULT_PACKAGEROOT_PATH;
+				StringBuilder rootPath = new StringBuilder(IPackageFragmentRoot.DEFAULT_PACKAGEROOT_PATH);
 				token = null;
 				while (memento.hasMoreTokens()) {
 					token = memento.nextToken();
 					char firstChar = token.charAt(0);
 					if (firstChar != JEM_PACKAGEFRAGMENT && firstChar != JEM_COUNT) {
-						rootPath += token;
+						rootPath.append(token);
 					} else {
 						break;
 					}
 				}
-				JavaElement root = (JavaElement)getPackageFragmentRoot(new Path(rootPath));
+				JavaElement root = (JavaElement)getPackageFragmentRoot(new Path(rootPath.toString()));
 				if (token != null && token.charAt(0) == JEM_PACKAGEFRAGMENT) {
 					return root.getHandleFromMemento(token, memento, owner);
 				} else {
@@ -1738,12 +1738,12 @@ public class JavaProject
 	public Map getOptions(boolean inheritJavaCoreOptions) {
 
 		// initialize to the defaults from JavaScriptCore options pool
-		Map options = inheritJavaCoreOptions ? JavaScriptCore.getOptions() : new Hashtable(5);
+		Map<String, String> options = inheritJavaCoreOptions ? JavaScriptCore.getOptions() : new Hashtable<String, String>(5);
 
 		// Get project specific options
 		JavaModelManager.PerProjectInfo perProjectInfo = null;
-		Hashtable projectOptions = null;
-		HashSet optionNames = JavaModelManager.getJavaModelManager().optionNames;
+		Hashtable<String, String> projectOptions = null;
+		HashSet<String> optionNames = JavaModelManager.getJavaModelManager().optionNames;
 		try {
 			perProjectInfo = getPerProjectInfo();
 			projectOptions = perProjectInfo.options;
@@ -1753,7 +1753,7 @@ public class JavaProject
 				if (projectPreferences == null) return options; // cannot do better (non-Java project)
 				// create project options
 				String[] propertyNames = projectPreferences.keys();
-				projectOptions = new Hashtable(propertyNames.length);
+				projectOptions = new Hashtable<String, String>(propertyNames.length);
 				for (int i = 0; i < propertyNames.length; i++){
 					String propertyName = propertyNames[i];
 					String value = projectPreferences.get(propertyName, null);
@@ -1765,18 +1765,16 @@ public class JavaProject
 				perProjectInfo.options = projectOptions;
 			}
 		} catch (JavaScriptModelException jme) {
-			projectOptions = new Hashtable();
+			projectOptions = new Hashtable<String, String>();
 		} catch (BackingStoreException e) {
-			projectOptions = new Hashtable();
+			projectOptions = new Hashtable<String, String>();
 		}
 
 		// Inherit from JavaScriptCore options if specified
 		if (inheritJavaCoreOptions) {
-			Iterator propertyNames = projectOptions.entrySet().iterator();
-			while (propertyNames.hasNext()) {
-				Map.Entry entry = (Map.Entry) propertyNames.next();
-				String propertyName = (String) entry.getKey();
-				String propertyValue = (String) entry.getValue();
+			for (Map.Entry<String, String> entry : projectOptions.entrySet()) {
+				String propertyName = entry.getKey();
+				String propertyValue = entry.getValue();
 				if (propertyValue != null && optionNames.contains(propertyName)){
 					options.put(propertyName, propertyValue.trim());
 				}
@@ -1925,13 +1923,11 @@ public class JavaProject
 	 */
 	public IPackageFragment[] getPackageFragmentsInRoots(IPackageFragmentRoot[] roots) {
 
-		ArrayList frags = new ArrayList();
-		for (int i = 0; i < roots.length; i++) {
-			IPackageFragmentRoot root = roots[i];
+		ArrayList<IJavaScriptElement> frags = new ArrayList<IJavaScriptElement>();
+		for (IPackageFragmentRoot root : roots) {
 			try {
-				IJavaScriptElement[] rootFragments = root.getChildren();
-				for (int j = 0; j < rootFragments.length; j++) {
-					frags.add(rootFragments[j]);
+				for (IJavaScriptElement rootFragment : root.getChildren()) {
+					frags.add(rootFragment);
 				}
 			} catch (JavaScriptModelException e) {
 				// do nothing
@@ -2163,10 +2159,10 @@ public class JavaProject
 	 * @see IJavaScriptProject
 	 */
 	public boolean hasIncludepathCycle(IIncludePathEntry[] preferredClasspath) {
-		HashSet cycleParticipants = new HashSet();
-		HashMap preferredClasspaths = new HashMap(1);
+		HashSet<IPath> cycleParticipants = new HashSet<IPath>();
+		HashMap<IJavaScriptProject, IIncludePathEntry[]> preferredClasspaths = new HashMap<IJavaScriptProject, IIncludePathEntry[]>(1);
 		preferredClasspaths.put(this, preferredClasspath);
-		updateCycleParticipants(new ArrayList(2), cycleParticipants, ResourcesPlugin.getWorkspace().getRoot(), new HashSet(2), preferredClasspaths);
+		updateCycleParticipants(new ArrayList<IPath>(2), cycleParticipants, ResourcesPlugin.getWorkspace().getRoot(), new HashSet(2), preferredClasspaths);
 		return !cycleParticipants.isEmpty();
 	}
 
@@ -2482,11 +2478,9 @@ public class JavaProject
 	public String[] projectPrerequisites(IIncludePathEntry[] entries)
 		throws JavaScriptModelException {
 
-		ArrayList prerequisites = new ArrayList();
+		ArrayList<String> prerequisites = new ArrayList<String>();
 		// need resolution
-		entries = resolveClasspath(entries);
-		for (int i = 0, length = entries.length; i < length; i++) {
-			IIncludePathEntry entry = entries[i];
+		for (IIncludePathEntry entry : resolveClasspath(entries)) {
 			if (entry.getEntryKind() == IIncludePathEntry.CPE_PROJECT) {
 				prerequisites.add(entry.getPath().lastSegment());
 			}
@@ -2642,9 +2636,8 @@ public class JavaProject
 	 * Resolve the given raw classpath.
 	 */
 	public IIncludePathEntry[] resolveClasspath(IIncludePathEntry[] rawClasspath) throws JavaScriptModelException {
-		ArrayList resolvedEntries = new ArrayList();
-		for (int i = 0, length = rawClasspath.length; i < length; i++) {
-			IIncludePathEntry rawEntry = rawClasspath[i];
+		ArrayList<IIncludePathEntry> resolvedEntries = new ArrayList<IIncludePathEntry>();
+		for (IIncludePathEntry rawEntry : rawClasspath) {
 			switch (rawEntry.getEntryKind()){
 				case IIncludePathEntry.CPE_VARIABLE:
 					IIncludePathEntry resolvedEntry = null;
@@ -2710,14 +2703,11 @@ public class JavaProject
 			}
 
 			IJavaScriptModelStatus unresolvedEntryStatus = JavaModelStatus.VERIFIED_OK;
-			HashMap rawReverseMap = new HashMap();
-			Map rootPathToResolvedEntries = new HashMap();
+			HashMap<IPath, IIncludePathEntry> rawReverseMap = new HashMap<IPath, IIncludePathEntry>();
+			Map<IPath, IIncludePathEntry> rootPathToResolvedEntries = new HashMap<IPath, IIncludePathEntry>();
 
-			ArrayList resolvedEntries = new ArrayList();
-			int length = rawClasspath.length;
-			for (int i = 0; i < length; i++) {
-
-				IIncludePathEntry rawEntry = rawClasspath[i];
+			ArrayList<IIncludePathEntry> resolvedEntries = new ArrayList<IIncludePathEntry>();
+			for (IIncludePathEntry rawEntry : rawClasspath) {
 				IPath resolvedPath;
 
 				switch (rawEntry.getEntryKind()){
@@ -3076,11 +3066,11 @@ public class JavaProject
 	 * @param preferredClasspaths Map
 	 */
 	public void updateCycleParticipants(
-			ArrayList prereqChain,
-			HashSet cycleParticipants,
+			ArrayList/*<IPath>*/ prereqChain,
+			HashSet/*<IPath>*/ cycleParticipants,
 			IWorkspaceRoot workspaceRoot,
-			HashSet traversed,
-			Map preferredClasspaths){
+			HashSet/*<IPath>*/ traversed,
+			Map/*<IJavaScriptProject, IIncludePathEntry[]>*/ preferredClasspaths){
 
 		IPath path = this.getPath();
 		prereqChain.add(path);

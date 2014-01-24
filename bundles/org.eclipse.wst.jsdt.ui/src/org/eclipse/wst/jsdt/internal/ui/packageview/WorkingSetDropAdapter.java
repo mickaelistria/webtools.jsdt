@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.packageview;
 
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.core.resources.IResource;
@@ -220,10 +222,10 @@ public class WorkingSetDropAdapter extends JdtViewerDropAdapter implements Trans
 		}
 		if (eventDetail == DND.DROP_MOVE) {
 			ITreeSelection treeSelection= (ITreeSelection)fSelection;
-			Map workingSets= groupByWorkingSets(treeSelection.getPaths());
-			for (Iterator iter= workingSets.keySet().iterator(); iter.hasNext();) {
-				IWorkingSet ws= (IWorkingSet)iter.next();
-				List toRemove= (List)workingSets.get(ws);
+			Map<IWorkingSet, List> workingSets= groupByWorkingSets(treeSelection.getPaths());
+			for (Entry<IWorkingSet, List> entry : workingSets.entrySet()) {
+				IWorkingSet ws= entry.getKey();
+				List toRemove= entry.getValue();
 				List currentElements= new ArrayList(Arrays.asList(ws.getElements()));
 				currentElements.removeAll(toRemove);
 				ws.setElements((IAdaptable[])currentElements.toArray(new IAdaptable[currentElements.size()]));

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
 
@@ -360,11 +361,10 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * @return IJavaScriptUnit[]
 	 */
 	private IJavaScriptUnit[] collectAffectedUnits(SearchResultGroup[] searchHits) {
-		Collection	result= new ArrayList();
+		Collection<IJavaScriptUnit> result= new ArrayList<IJavaScriptUnit>();
 		boolean hitInFactoryClass= false;
 
-		for(int i=0; i < searchHits.length; i++) {
-			SearchResultGroup	rg=  searchHits[i];
+		for(SearchResultGroup rg : searchHits) {
 			IJavaScriptUnit	icu= rg.getCompilationUnit();
 
 			result.add(icu);
@@ -373,7 +373,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 		}
 		if (!hitInFactoryClass)
 			result.add(fFactoryUnitHandle);
-		return (IJavaScriptUnit[]) result.toArray(new IJavaScriptUnit[result.size()]);
+		return result.toArray(new IJavaScriptUnit[result.size()]);
 	}
 
 	/**
@@ -418,10 +418,9 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * (i.e. are binary and therefore can't be modified).
 	 */
 	private SearchResultGroup[] excludeBinaryUnits(SearchResultGroup[] groups) {
-		Collection/*<SearchResultGroup>*/	result= new ArrayList();
+		Collection<SearchResultGroup> result= new ArrayList<SearchResultGroup>();
 
-		for (int i = 0; i < groups.length; i++) {
-			SearchResultGroup	rg=   groups[i];
+		for (SearchResultGroup rg : groups) {
 			IJavaScriptUnit	unit= rg.getCompilationUnit();
 
 			if (unit != null)	// Ignore hits within a binary unit
@@ -429,7 +428,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 			else
 				fCallSitesInBinaryUnits= true;
 		}
-		return (SearchResultGroup[]) result.toArray(new SearchResultGroup[result.size()]);
+		return result.toArray(new SearchResultGroup[result.size()]);
 	}
 
 	/**
@@ -534,11 +533,11 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 		FunctionDeclaration	ctorDecl= (FunctionDeclaration) ctorUnit.findDeclaringNode(fCtorBinding.getKey());
 
 		if (ctorDecl != null) {
-			List	formalArgs= ctorDecl.parameters();
+			List<SingleVariableDeclaration>	formalArgs= ctorDecl.parameters();
 			int		i= 0;
 
-			for(Iterator iter= formalArgs.iterator(); iter.hasNext(); i++) {
-				SingleVariableDeclaration	svd= (SingleVariableDeclaration) iter.next();
+			for(Iterator<SingleVariableDeclaration> iter= formalArgs.iterator(); iter.hasNext(); i++) {
+				SingleVariableDeclaration	svd= iter.next();
 
 				names[i]= svd.getName().getIdentifier();
 			}
@@ -597,7 +596,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * @param ast utility object used to create AST nodes
 	 */
 	private void setCtorTypeArguments(ClassInstanceCreation newCtorCall, String ctorTypeName, ITypeBinding[] ctorOwnerTypeParameters, AST ast) {
-        if (ctorOwnerTypeParameters.length == 0) // easy, just a simple type
+        if (ctorOwnerTypeParameters == null || ctorOwnerTypeParameters.length == 0) // easy, just a simple type
             newCtorCall.setType(ASTNodeFactory.newType(ast, ctorTypeName));
 	}
 
@@ -613,7 +612,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * @param ast utility object used to create AST nodes
 	 */
 	private void setMethodReturnType(FunctionDeclaration newMethod, String retTypeName, ITypeBinding[] ctorOwnerTypeParameters, AST ast) {
-        if (ctorOwnerTypeParameters.length == 0)
+        if (ctorOwnerTypeParameters == null || ctorOwnerTypeParameters.length == 0)
             newMethod.setReturnType2(ast.newSimpleType(ast.newSimpleName(retTypeName)));
 	}
 
@@ -629,7 +628,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * @param newMethod the <code>FunctionDeclaration</code> for the factory method
 	 */
 	private void createFactoryMethodSignature(AST ast, FunctionDeclaration newMethod) {
-		List argDecls= newMethod.parameters();
+		List<SingleVariableDeclaration> argDecls= newMethod.parameters();
 
 		for(int i=0; i < fArgTypes.length; i++) {
 			SingleVariableDeclaration argDecl= ast.newSingleVariableDeclaration();
@@ -679,7 +678,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * the factory method
 	 */
 	private void createFactoryMethodConstructorArgs(AST ast, ClassInstanceCreation newCtorCall) {
-		List	argList= newCtorCall.arguments();
+		List<ASTNode>	argList= newCtorCall.arguments();
 
 		for(int i=0; i < fArgTypes.length; i++) {
 			ASTNode	ctorArg= ast.newSimpleName(fFormalArgNames[i]);
@@ -700,8 +699,8 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 													 ASTRewrite unitRewriter, TextEditGroup gd) {
 		FunctionInvocation	factoryMethodCall= ast.newFunctionInvocation();
 
-		List	actualFactoryArgs= factoryMethodCall.arguments();
-		List	actualCtorArgs= ctorCall.arguments();
+		List<ASTNode>	actualFactoryArgs= factoryMethodCall.arguments();
+		List<Expression>	actualCtorArgs= ctorCall.arguments();
 
 		// Need to use a qualified name for the factory method if we're not
 		// in the context of the class holding the factory.
@@ -716,8 +715,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 		
 		factoryMethodCall.setName(ast.newSimpleName(fNewMethodName));
 
-		for(int i=0; i < actualCtorArgs.size(); i++) {
-			Expression	actualCtorArg= (Expression) actualCtorArgs.get(i);
+		for(Expression actualCtorArg : actualCtorArgs) {
 			ASTNode		movedArg= unitRewriter.createMoveTarget(actualCtorArg);
 
 			actualFactoryArgs.add(movedArg);
@@ -967,7 +965,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 		try {
 			pm.beginTask(RefactoringCoreMessages.IntroduceFactory_createChanges, fAllCallsTo.length);
 			final ITypeBinding binding= fFactoryOwningClass.resolveBinding();
-			final Map arguments= new HashMap();
+			final Map<String, String> arguments= new HashMap<String, String>();
 			String project= null;
 			IJavaScriptProject javaProject= fCUHandle.getJavaScriptProject();
 			if (javaProject != null)
@@ -987,7 +985,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fCUHandle));
 			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_NAME, fNewMethodName);
 			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_ELEMENT + 1, descriptor.elementToHandle(binding.getJavaElement()));
-			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
+			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
 			arguments.put(ATTRIBUTE_PROTECT, Boolean.valueOf(fProtectConstructor).toString());
 			final DynamicValidationStateChange result= new DynamicValidationRefactoringChange(descriptor, RefactoringCoreMessages.IntroduceFactory_name);
 			boolean hitInFactoryClass= false;
@@ -1077,10 +1075,9 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 	 * @param name
 	 */
 	private boolean hasMethod(AbstractTypeDeclaration type, String name) {
-		List	decls= type.bodyDeclarations();
+		List<BodyDeclaration>	decls= type.bodyDeclarations();
 
-		for (Iterator iter = decls.iterator(); iter.hasNext();) {
-			BodyDeclaration decl = (BodyDeclaration) iter.next();
+		for (BodyDeclaration decl : decls) {
 			if (decl instanceof FunctionDeclaration) {
 				if (((FunctionDeclaration) decl).getName().getIdentifier().equals(name))
 					return true;
@@ -1189,9 +1186,9 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 				int length= -1;
 				final StringTokenizer tokenizer= new StringTokenizer(selection);
 				if (tokenizer.hasMoreTokens())
-					offset= Integer.valueOf(tokenizer.nextToken()).intValue();
+					offset= Integer.parseInt(tokenizer.nextToken());
 				if (tokenizer.hasMoreTokens())
-					length= Integer.valueOf(tokenizer.nextToken()).intValue();
+					length= Integer.parseInt(tokenizer.nextToken());
 				if (offset >= 0 && length >= 0) {
 					fSelectionStart= offset;
 					fSelectionLength= length;
@@ -1228,7 +1225,7 @@ public class IntroduceFactoryRefactoring extends ScriptableRefactoring {
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JDTRefactoringDescriptor.ATTRIBUTE_NAME));
 			final String protect= extended.getAttribute(ATTRIBUTE_PROTECT);
 			if (protect != null) {
-				fProtectConstructor= Boolean.valueOf(protect).booleanValue();
+				fProtectConstructor= Boolean.parseBoolean(protect);
 			} else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_PROTECT));
 		} else

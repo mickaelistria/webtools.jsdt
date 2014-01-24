@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *   Robert M. Fuhrer (rfuhrer@watson.ibm.com), IBM Corporation - initial API and implementation
+ *   Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets;
 
@@ -121,8 +122,8 @@ public class ArrayTypeSet extends TypeSet {
 
 			return fElemTypeSet.containsAll(ats.fElemTypeSet);
 		}
-		for(Iterator iter= s.iterator(); iter.hasNext(); ) {
-			TType t= (TType) iter.next();
+		for(Iterator<TType> iter= s.iterator(); iter.hasNext(); ) {
+			TType t= iter.next();
 			if (!contains(t))
 				return false;
 		}
@@ -132,16 +133,16 @@ public class ArrayTypeSet extends TypeSet {
 	/* (non-Javadoc)
 	 * @see org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets.TypeSet#iterator()
 	 */
-	public Iterator iterator() {
+	public Iterator/*<TType>*/ iterator() {
 		if (fEnumCache != null) return fEnumCache.iterator();
 
-		return new Iterator() {
-			Iterator fElemIter= fElemTypeSet.iterator();
+		return new Iterator<TType>() {
+			Iterator<TType> fElemIter= fElemTypeSet.iterator();
 			public boolean hasNext() {
 				return fElemIter.hasNext();
 			}
-			public Object next() {
-				return TTypes.createArrayType(((TType) fElemIter.next()), 1);
+			public TType next() {
+				return TTypes.createArrayType((fElemIter.next()), 1);
 			}
 			public void remove() {
 				throw new UnsupportedOperationException();
@@ -158,8 +159,8 @@ public class ArrayTypeSet extends TypeSet {
 		if (fEnumCache == null) {
 			fEnumCache= new EnumeratedTypeSet(getTypeSetEnvironment());
 
-			for(Iterator iter= fElemTypeSet.iterator(); iter.hasNext(); ) {
-				TType t= (TType) iter.next();
+			for(Iterator<TType> iter= fElemTypeSet.iterator(); iter.hasNext(); ) {
+				TType t= iter.next();
 				fEnumCache.add(TTypes.createArrayType(t, 1));
 			}
 			fEnumCache.initComplete();
@@ -199,6 +200,11 @@ public class ArrayTypeSet extends TypeSet {
 			return fElemTypeSet.equals(other.fElemTypeSet);
 		}
 		return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.fElemTypeSet.hashCode();
 	}
 
 	public String toString() {

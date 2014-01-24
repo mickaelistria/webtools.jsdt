@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,13 +39,14 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.wst.jsdt.core.IIncludePathEntry;
 import org.eclipse.wst.jsdt.core.IElementChangedListener;
+import org.eclipse.wst.jsdt.core.IIncludePathEntry;
 import org.eclipse.wst.jsdt.core.IJavaScriptElement;
 import org.eclipse.wst.jsdt.core.IJavaScriptModel;
 import org.eclipse.wst.jsdt.core.IJavaScriptProject;
 import org.eclipse.wst.jsdt.core.JavaScriptCore;
 import org.eclipse.wst.jsdt.core.JavaScriptModelException;
+import org.eclipse.wst.jsdt.internal.core.DeltaProcessor.RootInfo;
 import org.eclipse.wst.jsdt.internal.core.util.Util;
 
 /**
@@ -96,22 +99,22 @@ public class DeltaProcessingState implements IResourceChangeListener {
 	public boolean rootsAreStale = true;
 
 	/* Threads that are currently running initializeRoots() */
-	private Set initializingThreads = Collections.synchronizedSet(new HashSet());
+	private Set<Thread> initializingThreads = Collections.synchronizedSet(new HashSet<Thread>());
 
 	/* A table from file system absoulte path (String) to timestamp (Long) */
-	public Hashtable externalTimeStamps;
+	public Hashtable/*<IPath, Long>*/ externalTimeStamps;
 
 	/* A table from JavaProject to ClasspathValidation */
-	private HashMap classpathValidations = new HashMap();
+	private HashMap<IJavaScriptProject, ClasspathValidation> classpathValidations = new HashMap<IJavaScriptProject, ClasspathValidation>();
 
 	/* A table from JavaProject to ProjectReferenceChange */
-	private HashMap projectReferenceChanges= new HashMap();
+	private HashMap<IJavaScriptProject, ProjectReferenceChange> projectReferenceChanges= new HashMap<IJavaScriptProject, ProjectReferenceChange>();
 
 	/**
 	 * Workaround for bug 15168 circular errors not reported
 	 * This is a cache of the projects before any project addition/deletion has started.
 	 */
-	private HashSet javaProjectNamesCache;
+	private HashSet<String> javaProjectNamesCache;
 
 	/*
 	 * Need to clone defensively the listener information, in case some listener is reacting to some notification iteration by adding/changing/removing
@@ -167,7 +170,7 @@ public class DeltaProcessingState implements IResourceChangeListener {
 	}
 
 	public synchronized ClasspathValidation addClasspathValidation(JavaProject project) {
-		ClasspathValidation validation = (ClasspathValidation) this.classpathValidations.get(project);
+		ClasspathValidation validation = this.classpathValidations.get(project);
 		if (validation == null) {
 			validation = new ClasspathValidation(project);
 			this.classpathValidations.put(project, validation);
@@ -176,7 +179,7 @@ public class DeltaProcessingState implements IResourceChangeListener {
 	}
 
 	public synchronized void addProjectReferenceChange(JavaProject project, IIncludePathEntry[] oldResolvedClasspath) {
-		ProjectReferenceChange change = (ProjectReferenceChange) this.projectReferenceChanges.get(project);
+		ProjectReferenceChange change = this.projectReferenceChanges.get(project);
 		if (change == null) {
 			change = new ProjectReferenceChange(project, oldResolvedClasspath);
 			this.projectReferenceChanges.put(project, change);
@@ -186,10 +189,10 @@ public class DeltaProcessingState implements IResourceChangeListener {
 	public void initializeRoots() {
 
 		// recompute root infos only if necessary
-		HashMap newRoots = null;
-		HashMap newOtherRoots = null;
-		HashMap newSourceAttachments = null;
-		HashMap newProjectDependencies = null;
+		HashMap<IPath, RootInfo> newRoots = null;
+		HashMap<IPath, List<RootInfo>> newOtherRoots = null;
+		HashMap<IPath, IPath> newSourceAttachments = null;
+		HashMap<IJavaScriptProject, IJavaScriptProject[]> newProjectDependencies = null;
 		if (this.rootsAreStale) {
 			Thread currentThread = Thread.currentThread();
 			boolean addedCurrentThread = false;
@@ -203,10 +206,10 @@ public class DeltaProcessingState implements IResourceChangeListener {
 				// ensure that containers are initialized in one batch
 				JavaModelManager.getJavaModelManager().batchContainerInitializations = true;
 
-				newRoots = new HashMap();
+				newRoots = new HashMap<IPath, RootInfo>();
 				newOtherRoots = new HashMap();
-				newSourceAttachments = new HashMap();
-				newProjectDependencies = new HashMap();
+				newSourceAttachments = new HashMap<IPath, IPath>();
+				newProjectDependencies = new HashMap<IJavaScriptProject, IJavaScriptProject[]>();
 
 				IJavaScriptModel model = JavaModelManager.getJavaModelManager().getJavaModel();
 				IJavaScriptProject[] projects;
@@ -229,7 +232,7 @@ public class DeltaProcessingState implements IResourceChangeListener {
 						IIncludePathEntry entry = classpath[j];
 						if (entry.getEntryKind() == IIncludePathEntry.CPE_PROJECT) {
 							IJavaScriptProject key = model.getJavaScriptProject(entry.getPath().segment(0)); // TODO (jerome) reuse handle
-							IJavaScriptProject[] dependents = (IJavaScriptProject[]) newProjectDependencies.get(key);
+							IJavaScriptProject[] dependents = newProjectDependencies.get(key);
 							if (dependents == null) {
 								dependents = new IJavaScriptProject[] {project};
 							} else {
@@ -246,9 +249,9 @@ public class DeltaProcessingState implements IResourceChangeListener {
 						if (newRoots.get(path) == null) {
 							newRoots.put(path, new DeltaProcessor.RootInfo(project, path, ((ClasspathEntry)entry).fullInclusionPatternChars(), ((ClasspathEntry)entry).fullExclusionPatternChars(), entry.getEntryKind()));
 						} else {
-							ArrayList rootList = (ArrayList)newOtherRoots.get(path);
+							List<RootInfo> rootList = newOtherRoots.get(path);
 							if (rootList == null) {
-								rootList = new ArrayList();
+								rootList = new ArrayList<RootInfo>();
 								newOtherRoots.put(path, rootList);
 							}
 							rootList.add(new DeltaProcessor.RootInfo(project, path, ((ClasspathEntry)entry).fullInclusionPatternChars(), ((ClasspathEntry)entry).fullExclusionPatternChars(), entry.getEntryKind()));
@@ -396,9 +399,9 @@ public class DeltaProcessingState implements IResourceChangeListener {
 
 	}
 
-	public Hashtable getExternalLibTimeStamps() {
+	public Hashtable/*<IPath, Long>*/ getExternalLibTimeStamps() {
 		if (this.externalTimeStamps == null) {
-			Hashtable timeStamps = new Hashtable();
+			Hashtable<IPath, Long> timeStamps = new Hashtable<IPath, Long>();
 			File timestampsFile = getTimeStampsFile();
 			DataInputStream in = null;
 			try {
@@ -407,7 +410,7 @@ public class DeltaProcessingState implements IResourceChangeListener {
 				while (size-- > 0) {
 					String key = in.readUTF();
 					long timestamp = in.readLong();
-					timeStamps.put(Path.fromPortableString(key), new Long(timestamp));
+					timeStamps.put(Path.fromPortableString(key), Long.valueOf(timestamp));
 				}
 			} catch (IOException e) {
 				if (timestampsFile.exists())
@@ -437,17 +440,16 @@ public class DeltaProcessingState implements IResourceChangeListener {
 	 * Returns the list of java projects before resource delta processing
 	 * has started.
 	 */
-	public synchronized HashSet getOldJavaProjecNames() {
+	public synchronized HashSet/*<String>*/ getOldJavaProjecNames() {
 		if (this.javaProjectNamesCache == null) {
-			HashSet result = new HashSet();
+			HashSet<String> result = new HashSet<String>();
 			IJavaScriptProject[] projects;
 			try {
 				projects = JavaModelManager.getJavaModelManager().getJavaModel().getJavaScriptProjects();
 			} catch (JavaScriptModelException e) {
 				return this.javaProjectNamesCache;
 			}
-			for (int i = 0, length = projects.length; i < length; i++) {
-				IJavaScriptProject project = projects[i];
+			for (IJavaScriptProject project : projects) {
 				result.add(project.getElementName());
 			}
 			return this.javaProjectNamesCache = result;

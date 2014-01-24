@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.structure;
 
@@ -146,12 +147,12 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	private static final boolean PREFIX_FUNCTION_HEAD = true;
 	
 	
-	private List fParameterInfos;
+	private List<ParameterInfo> fParameterInfos;
 
 	private CompilationUnitRewrite fBaseCuRewrite;
-	private List fExceptionInfos;
+	private List<ExceptionInfo> fExceptionInfos;
 	protected TextChangeManager fChangeManager;
-	protected List/*<Change>*/ fOtherChanges;
+	protected List<Change> fOtherChanges;
 	private IFunction fMethod;
 	private IFunction fTopMethod;
 	private IFunction[] fRippleMethods;
@@ -192,11 +193,11 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		}
 	}
 
-	private static List createParameterInfoList(IFunction method) {
+	private static List<ParameterInfo> createParameterInfoList(IFunction method) {
 		try {
 			String[] typeNames= method.getParameterTypes();
 			String[] oldNames= method.getParameterNames();
-			List result= new ArrayList(typeNames.length);
+			List<ParameterInfo> result= new ArrayList<ParameterInfo>(typeNames.length);
 			for (int i= 0; i < oldNames.length; i++){
 				ParameterInfo parameterInfo;
 				if (i == oldNames.length - 1 && Flags.isVarargs(method.getFlags())) {
@@ -214,7 +215,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			return result;
 		} catch(JavaScriptModelException e) {
 			JavaScriptPlugin.log(e);
-			return new ArrayList(0);
+			return new ArrayList<ParameterInfo>(0);
 		}		
 	}
 
@@ -426,8 +427,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	}
 
 	private boolean areParameterTypesSameAsInitial() {
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (ParameterInfo info : this.fParameterInfos) {
 			if (! info.isAdded() && ! info.isDeleted() && info.isTypeNameChanged())
 				return false;
 		}
@@ -443,8 +443,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	}
 	
 	private boolean areExceptionsSameAsInitial() {
-		for (Iterator iter= fExceptionInfos.iterator(); iter.hasNext();) {
-			ExceptionInfo info= (ExceptionInfo) iter.next();
+		for (ExceptionInfo info : this.fExceptionInfos) {
 			if (! info.isOld())
 				return false;
 		}
@@ -453,8 +452,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 	private void checkParameterNamesAndValues(RefactoringStatus result) {
 		int i= 1;
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext(); i++) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext(); i++) {
+			ParameterInfo info= iter.next();
 			if (info.isDeleted())
 				continue;
 			checkParameterName(result, info, i);
@@ -527,9 +526,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				
 				// Vararg method can override method that takes an array as last argument
 				fOldVarargIndex= rippleMethod.getNumberOfParameters() - 1;
-				List notDeletedInfos= getNotDeletedInfos();
-				for (int i= 0; i < notDeletedInfos.size(); i++) {
-					ParameterInfo info= (ParameterInfo) notDeletedInfos.get(i);
+				for (ParameterInfo info : getNotDeletedInfos()) {
 					if (fOldVarargIndex != -1 && info.getOldIndex() == fOldVarargIndex && ! info.isNewVarargs()) {
 						String rippleMethodType= JavaModelUtil.getFullyQualifiedName(rippleMethod.getDeclaringType());
 						String message= Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_ripple_cannot_convert_vararg, new Object[] {info.getNewName(), rippleMethodType}); 
@@ -545,9 +542,9 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	private RefactoringStatus checkOriginalVarargs() throws JavaScriptModelException {
 		if (JdtFlags.isVarargs(fMethod))
 			fOldVarargIndex= fMethod.getNumberOfParameters() - 1;
-		List notDeletedInfos= getNotDeletedInfos();
+		List<ParameterInfo> notDeletedInfos= getNotDeletedInfos();
 		for (int i= 0; i < notDeletedInfos.size(); i++) {
-			ParameterInfo info= (ParameterInfo) notDeletedInfos.get(i);
+			ParameterInfo info= notDeletedInfos.get(i);
 			if (info.isOldVarargs() && ! info.isNewVarargs())
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_cannot_convert_vararg, info.getNewName())); 
 			if (i != notDeletedInfos.size() - 1) {
@@ -565,22 +562,21 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		
 		RefactoringStatus result= new RefactoringStatus();
 		if (fReturnTypeInfo.isTypeNameChanged() && fReturnTypeInfo.getNewTypeBinding() != null) {
-			HashSet typeVariablesCollector= new HashSet();
+			HashSet<ITypeBinding> typeVariablesCollector= new HashSet<ITypeBinding>();
 			collectTypeVariables(fReturnTypeInfo.getNewTypeBinding(), typeVariablesCollector);
 			if (typeVariablesCollector.size() != 0) {
-				ITypeBinding first= (ITypeBinding) typeVariablesCollector.iterator().next();
+				ITypeBinding first= typeVariablesCollector.iterator().next();
 				String msg= Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_return_type_contains_type_variable, new String[] {fReturnTypeInfo.getNewTypeName(), first.getName()}); 
 				result.addError(msg);
 			}
 		}
 		
-		for (Iterator iter= getNotDeletedInfos().iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (ParameterInfo info : getNotDeletedInfos()) {
 			if (info.isTypeNameChanged() && info.getNewTypeBinding() != null) {
-				HashSet typeVariablesCollector= new HashSet();
+				HashSet<ITypeBinding> typeVariablesCollector= new HashSet<ITypeBinding>();
 				collectTypeVariables(info.getNewTypeBinding(), typeVariablesCollector);
 				if (typeVariablesCollector.size() != 0) {
-					ITypeBinding first= (ITypeBinding) typeVariablesCollector.iterator().next();
+					ITypeBinding first= typeVariablesCollector.iterator().next();
 					String msg= Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_parameter_type_contains_type_variable, new String[] {info.getNewTypeName(), info.getNewName(), first.getName()}); 
 					result.addError(msg);
 				}
@@ -589,7 +585,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		return result;
 	}
 	
-	private void collectTypeVariables(ITypeBinding typeBinding, Set typeVariablesCollector) {
+	private void collectTypeVariables(ITypeBinding typeBinding, Set<ITypeBinding> typeVariablesCollector) {
 		if (typeBinding.isArray()) {
 			collectTypeVariables(typeBinding.getElementType(), typeVariablesCollector);
 			
@@ -727,16 +723,15 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 	private RefactoringStatus createExceptionInfoList() {
 		if (fExceptionInfos == null || fExceptionInfos.isEmpty()) {
-			fExceptionInfos= new ArrayList(0);
+			fExceptionInfos= new ArrayList<ExceptionInfo>(0);
 			try {
 				ASTNode nameNode= NodeFinder.perform(fBaseCuRewrite.getRoot(), fMethod.getNameRange());
 				if (nameNode == null || !(nameNode instanceof Name) || !(nameNode.getParent() instanceof FunctionDeclaration))
 					return null;
 				FunctionDeclaration methodDeclaration= (FunctionDeclaration) nameNode.getParent();
-				List exceptions= methodDeclaration.thrownExceptions();
-				List result= new ArrayList(exceptions.size());
-				for (int i= 0; i < exceptions.size(); i++) {
-					Name name= (Name) exceptions.get(i);
+				List<Name> exceptions= methodDeclaration.thrownExceptions();
+				List<ExceptionInfo> result= new ArrayList<ExceptionInfo>(exceptions.size());
+				for (Name name : exceptions) {
 					ITypeBinding typeBinding= name.resolveTypeBinding();
 					if (typeBinding == null)
 						return RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.ChangeSignatureRefactoring_no_exception_binding);
@@ -824,7 +819,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 
 	private void clearManagers() {
 		fChangeManager= null;
-		fOtherChanges= new ArrayList();
+		fOtherChanges= new ArrayList<Change>();
 	}
 	
 	private RefactoringStatus checkVisibilityChanges() throws JavaScriptModelException {
@@ -901,8 +896,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	private String getMethodThrows() {
 		final String throwsString= " throws "; //$NON-NLS-1$
 		StringBuffer buff= new StringBuffer(throwsString);
-		for (Iterator iter= fExceptionInfos.iterator(); iter.hasNext(); ) {
-			ExceptionInfo info= (ExceptionInfo) iter.next();
+		for (ExceptionInfo info : this.fExceptionInfos) {
 			if (! info.isDeleted()) {
 				buff.append(info.getType().getElementName());
 				buff.append(", "); //$NON-NLS-1$
@@ -917,8 +911,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	private String getOldMethodThrows() {
 		final String throwsString= " throws "; //$NON-NLS-1$
 		StringBuffer buff= new StringBuffer(throwsString);
-		for (Iterator iter= fExceptionInfos.iterator(); iter.hasNext(); ) {
-			ExceptionInfo info= (ExceptionInfo) iter.next();
+		for (ExceptionInfo info : this.fExceptionInfos) {
 			if (! info.isAdded()) {
 				buff.append(info.getType().getElementName());
 				buff.append(", "); //$NON-NLS-1$
@@ -931,10 +924,9 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	}
 
 	private void checkForDuplicateParameterNames(RefactoringStatus result){
-		Set found= new HashSet();
-		Set doubled= new HashSet();
-		for (Iterator iter = getNotDeletedInfos().iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo)iter.next();
+		Set<String> found= new HashSet<String>();
+		Set<String> doubled= new HashSet<String>();
+		for (ParameterInfo info : getNotDeletedInfos()) {
 			String newName= info.getNewName();
 			if (found.contains(newName) && !doubled.contains(newName)){
 				result.addFatalError(Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_duplicate_name, newName));
@@ -986,8 +978,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	private String getOldMethodParameters() {
 		StringBuffer buff= new StringBuffer();
 		int i= 0;
-		for (Iterator iter= getNotAddedInfos().iterator(); iter.hasNext(); i++) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (Iterator<ParameterInfo> iter= getNotAddedInfos().iterator(); iter.hasNext(); i++) {
+			ParameterInfo info= iter.next();
 			if (i != 0 )
 				buff.append(", ");  //$NON-NLS-1$
 			buff.append(createDeclarationString(info));
@@ -998,8 +990,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	private String getMethodParameters() {
 		StringBuffer buff= new StringBuffer();
 		int i= 0;
-		for (Iterator iter= getNotDeletedInfos().iterator(); iter.hasNext(); i++) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (Iterator<ParameterInfo> iter= getNotDeletedInfos().iterator(); iter.hasNext(); i++) {
+			ParameterInfo info= iter.next();
 			if (i != 0 )
 				buff.append(", ");  //$NON-NLS-1$
 			buff.append(createDeclarationString(info));
@@ -1007,41 +999,38 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		return buff.toString();
 	}
 
-	private List getAddedInfos(){
-		List result= new ArrayList(1);
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+	private List<ParameterInfo> getAddedInfos(){
+		List<ParameterInfo> result= new ArrayList<ParameterInfo>(1);
+		for (ParameterInfo info : this.fParameterInfos) {
 			if (info.isAdded())
 				result.add(info);
 		}
 		return result;
 	}
 
-	private List getDeletedInfos(){
-		List result= new ArrayList(1);
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+	private List<ParameterInfo> getDeletedInfos(){
+		List<ParameterInfo> result= new ArrayList<ParameterInfo>(1);
+		for (ParameterInfo info : this.fParameterInfos) {
 			if (info.isDeleted())
 				result.add(info);
 		}
 		return result;
 	}
 
-	private List getNotAddedInfos(){
-		List all= new ArrayList(fParameterInfos);
+	private List<ParameterInfo> getNotAddedInfos(){
+		List<ParameterInfo> all= new ArrayList<ParameterInfo>(fParameterInfos);
 		all.removeAll(getAddedInfos());
 		return all;
 	}
 	
-	private List getNotDeletedInfos(){
-		List all= new ArrayList(fParameterInfos);
+	private List<ParameterInfo> getNotDeletedInfos(){
+		List<ParameterInfo> all= new ArrayList<ParameterInfo>(fParameterInfos);
 		all.removeAll(getDeletedInfos());
 		return all;
 	}
 	
 	private boolean areNamesSameAsInitial() {
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (ParameterInfo info : this.fParameterInfos) {
 			if (info.isRenamed())
 				return false;
 		}
@@ -1050,8 +1039,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 
 	private boolean isOrderSameAsInitial(){
 		int i= 0;
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext(); i++) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext(); i++) {
+			ParameterInfo info= iter.next();
 			if (info.getOldIndex() != i) // includes info.isAdded()
 				return false;
 			if (info.isDeleted())
@@ -1080,14 +1069,13 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 	private RefactoringStatus checkParameterNamesInRippleMethods() throws JavaScriptModelException {
 		RefactoringStatus result= new RefactoringStatus();
-		Set newParameterNames= getNewParameterNamesList();
-		for (int i= 0; i < fRippleMethods.length; i++) {
-			String[] paramNames= fRippleMethods[i].getParameterNames();
-			for (int j= 0; j < paramNames.length; j++) {
-				if (newParameterNames.contains(paramNames[j])){
-					String[] args= new String[]{JavaElementUtil.createMethodSignature(fRippleMethods[i]), paramNames[j]};
+		Set<String> newParameterNames= getNewParameterNamesList();
+		for (IFunction rippleMethod : this.fRippleMethods) {
+			for (String parameterName : rippleMethod.getParameterNames()) {
+				if (newParameterNames.contains(parameterName)){
+					String[] args= new String[]{JavaElementUtil.createMethodSignature(rippleMethod), parameterName};
 					String msg= Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_already_has, args); 
-					RefactoringStatusContext context= JavaStatusContext.create(fRippleMethods[i].getJavaScriptUnit(), fRippleMethods[i].getNameRange());
+					RefactoringStatusContext context= JavaStatusContext.create(rippleMethod.getJavaScriptUnit(), rippleMethod.getNameRange());
 					result.addError(msg, context);
 				}	
 			}
@@ -1095,26 +1083,24 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		return result;
 	}
 	
-	private Set getNewParameterNamesList() {
-		Set oldNames= getOriginalParameterNames();
-		Set currentNames= getNamesOfNotDeletedParameters();
+	private Set<String> getNewParameterNamesList() {
+		Set<String> oldNames= getOriginalParameterNames();
+		Set<String> currentNames= getNamesOfNotDeletedParameters();
 		currentNames.removeAll(oldNames);
 		return currentNames;
 	}
 	
-	private Set getNamesOfNotDeletedParameters() {
-		Set result= new HashSet();
-		for (Iterator iter= getNotDeletedInfos().iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+	private Set<String> getNamesOfNotDeletedParameters() {
+		Set<String> result= new HashSet<String>();
+		for (ParameterInfo info : getNotDeletedInfos()) {
 			result.add(info.getNewName());
 		}
 		return result;
 	}
 	
-	private Set getOriginalParameterNames() {
-		Set result= new HashSet();
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+	private Set<String> getOriginalParameterNames() {
+		Set<String> result= new HashSet<String>();
+		for (ParameterInfo info : this.fParameterInfos) {
 			if (! info.isAdded())
 				result.add(info.getOldName());
 		}
@@ -1138,10 +1124,10 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		pm.beginTask("", 1); //$NON-NLS-1$
 		try {
 			final TextChange[] changes= fChangeManager.getAllChanges();
-			final List list= new ArrayList(changes.length);
+			final List<Change> list= new ArrayList<Change>(changes.length);
 			list.addAll(fOtherChanges);
 			list.addAll(Arrays.asList(changes));
-			final Map arguments= new HashMap();
+			final Map<String, String> arguments= new HashMap<String, String>();
 			String project= null;
 			IJavaScriptProject javaProject= fMethod.getJavaScriptProject();
 			if (javaProject != null)
@@ -1171,11 +1157,10 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				}
 				if (fReturnTypeInfo.isTypeNameChanged())
 					comment.addSetting(Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_new_return_type_pattern, fReturnTypeInfo.getNewTypeName()));
-				List deleted= new ArrayList();
-				List added= new ArrayList();
-				List changed= new ArrayList();
-				for (final Iterator iterator= fParameterInfos.iterator(); iterator.hasNext();) {
-					final ParameterInfo info= (ParameterInfo) iterator.next();
+				List<String> deleted= new ArrayList<String>();
+				List<String> added= new ArrayList<String>();
+				List<String> changed= new ArrayList<String>();
+				for (ParameterInfo info : this.fParameterInfos) {
 					if (info.isDeleted())
 						deleted.add(Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_deleted_parameter_pattern, new String[] { info.getOldTypeName(), info.getOldName()}));
 					else if (info.isAdded())
@@ -1184,25 +1169,24 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 						changed.add(Messages.format(RefactoringCoreMessages.ChangeSignatureRefactoring_changed_parameter_pattern, new String[] { info.getOldTypeName(), info.getOldName()}));
 				}
 				if (!added.isEmpty())
-					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_added_parameters, (String[]) added.toArray(new String[added.size()])));
+					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_added_parameters, added.toArray(new String[added.size()])));
 				if (!deleted.isEmpty())
-					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_removed_parameters, (String[]) deleted.toArray(new String[deleted.size()])));
+					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_removed_parameters, deleted.toArray(new String[deleted.size()])));
 				if (!changed.isEmpty())
-					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_changed_parameters, (String[]) changed.toArray(new String[changed.size()])));
+					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_changed_parameters, changed.toArray(new String[changed.size()])));
 				added.clear();
 				deleted.clear();
 				changed.clear();
-				for (final Iterator iterator= fExceptionInfos.iterator(); iterator.hasNext();) {
-					final ExceptionInfo info= (ExceptionInfo) iterator.next();
+				for (ExceptionInfo info : this.fExceptionInfos) {
 					if (info.isAdded())
 						added.add(info.getType().getElementName());
 					else if (info.isDeleted())
 						deleted.add(info.getType().getElementName());
 				}
 				if (!added.isEmpty())
-					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_added_exceptions, (String[]) added.toArray(new String[added.size()])));
+					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_added_exceptions, added.toArray(new String[added.size()])));
 				if (!deleted.isEmpty())
-					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_removed_exceptions, (String[]) deleted.toArray(new String[deleted.size()])));
+					comment.addSetting(JDTRefactoringDescriptorComment.createCompositeSetting(RefactoringCoreMessages.ChangeSignatureRefactoring_removed_exceptions, deleted.toArray(new String[deleted.size()])));
 				descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.CHANGE_METHOD_SIGNATURE, project, description, comment.asString(), arguments, flags);
 				arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fMethod));
 				arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_NAME, fMethodName);
@@ -1212,13 +1196,12 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 					arguments.put(ATTRIBUTE_RETURN, fReturnTypeInfo.getNewTypeName());
 				try {
 					if (!isVisibilitySameAsInitial())
-						arguments.put(ATTRIBUTE_VISIBILITY, new Integer(fVisibility).toString());
+						arguments.put(ATTRIBUTE_VISIBILITY, Integer.toString(fVisibility));
 				} catch (JavaScriptModelException exception) {
 					JavaScriptPlugin.log(exception);
 				}
 				int count= 1;
-				for (final Iterator iterator= fParameterInfos.iterator(); iterator.hasNext();) {
-					final ParameterInfo info= (ParameterInfo) iterator.next();
+				for (ParameterInfo info : this.fParameterInfos) {
 					final StringBuffer buffer= new StringBuffer(64);
 					buffer.append(info.getOldTypeName());
 					buffer.append(" "); //$NON-NLS-1$
@@ -1238,17 +1221,16 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 					count++;
 				}
 				count= 1;
-				for (final Iterator iterator= fExceptionInfos.iterator(); iterator.hasNext();) {
-					final ExceptionInfo info= (ExceptionInfo) iterator.next();
+				for (ExceptionInfo info : this.fExceptionInfos) {
 					arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_ELEMENT + count, descriptor.elementToHandle(info.getType()));
-					arguments.put(ATTRIBUTE_KIND + count, new Integer(info.getKind()).toString());
+					arguments.put(ATTRIBUTE_KIND + count, Integer.toString(info.getKind()));
 					count++;
 				}
 			} catch (JavaScriptModelException exception) {
 				JavaScriptPlugin.log(exception);
 				return null;
 			}
-			return new DynamicValidationRefactoringChange(descriptor, doGetRefactoringChangeName(), (Change[]) list.toArray(new Change[list.size()]));
+			return new DynamicValidationRefactoringChange(descriptor, doGetRefactoringChangeName(), list.toArray(new Change[list.size()]));
 		} finally {
 			pm.done();
 			clearManagers();
@@ -1263,17 +1245,16 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		pm.beginTask(RefactoringCoreMessages.ChangeSignatureRefactoring_preview, 2); 
 		fChangeManager= new TextChangeManager();
 		boolean isNoArgConstructor= isNoArgConstructor();
-		Map namedSubclassMapping= null;
+		Map<IJavaScriptUnit, Set<IType>> namedSubclassMapping= null;
 		if (isNoArgConstructor){
 			//create only when needed;
 			namedSubclassMapping= createNamedSubclassMapping(new SubProgressMonitor(pm, 1));
 		}else{
 			pm.worked(1);
 		}
-		for (int i= 0; i < fOccurrences.length; i++) {
+		for (SearchResultGroup group : fOccurrences) {
 			if (pm.isCanceled())
 				throw new OperationCanceledException();
-			SearchResultGroup group= fOccurrences[i];
 			IJavaScriptUnit cu= group.getCompilationUnit();
 			if (cu == null)
 				continue;
@@ -1287,7 +1268,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			ASTNode[] nodes= ASTNodeSearchUtil.findNodes(group.getSearchResults(), cuRewrite.getRoot());
 			
 			//IntroduceParameterObjectRefactoring needs to update declarations first:
-			List/*<OccurrenceUpdate>*/ deferredUpdates= new ArrayList();
+			List<OccurrenceUpdate> deferredUpdates= new ArrayList<OccurrenceUpdate>();
 			for (int j= 0; j < nodes.length; j++) {
 				OccurrenceUpdate update= createOccurrenceUpdate(nodes[j], cuRewrite, result);
 				if (update instanceof DeclarationUpdate) {
@@ -1296,15 +1277,13 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 					deferredUpdates.add(update);
 				}
 			}
-			for (Iterator iter= deferredUpdates.iterator(); iter.hasNext();) {
-				((OccurrenceUpdate) iter.next()).updateNode();
+			for (OccurrenceUpdate update : deferredUpdates) {
+				update.updateNode();
 			}
 			
 			if (isNoArgConstructor && namedSubclassMapping.containsKey(cu)){
 				//only non-anonymous subclasses may have noArgConstructors to modify - see bug 43444
-				Set subtypes= (Set)namedSubclassMapping.get(cu);
-				for (Iterator iter= subtypes.iterator(); iter.hasNext();) {
-					IType subtype= (IType) iter.next();
+				for (IType subtype : namedSubclassMapping.get(cu)) {
 					AbstractTypeDeclaration subtypeNode= ASTNodeSearchUtil.getAbstractTypeDeclarationNode(subtype, cuRewrite.getRoot());
 					if (subtypeNode != null)
 						modifyImplicitCallsToNoArgConstructor(subtypeNode, cuRewrite);
@@ -1319,18 +1298,16 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		return fChangeManager;
 	}
 	
-	//Map<IJavaScriptUnit, Set<IType>>
-	private Map createNamedSubclassMapping(IProgressMonitor pm) throws JavaScriptModelException{
+	private Map<IJavaScriptUnit, Set<IType>> createNamedSubclassMapping(IProgressMonitor pm) throws JavaScriptModelException{
 		IType[] subclasses= getCachedTypeHierarchy(new SubProgressMonitor(pm, 1)).getSubclasses(fMethod.getDeclaringType());
-		Map result= new HashMap();
-		for (int i= 0; i < subclasses.length; i++) {
-			IType subclass= subclasses[i];
+		Map<IJavaScriptUnit, Set<IType>> result= new HashMap<IJavaScriptUnit, Set<IType>>();
+		for (IType subclass : subclasses) {
 			if (subclass.isAnonymous())
 				continue;
 			IJavaScriptUnit cu= subclass.getJavaScriptUnit();
 			if (! result.containsKey(cu))
-				result.put(cu, new HashSet());
-			((Set)result.get(cu)).add(subclass);
+				result.put(cu, new HashSet<IType>());
+			result.get(cu).add(subclass);
 		}
 		return result;
 	}
@@ -1358,8 +1335,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 	private void addArgumentsToNewSuperConstructorCall(SuperConstructorInvocation superCall, CompilationUnitRewrite cuRewrite) {
 		int i= 0;
-		for (Iterator iter= getNotDeletedInfos().iterator(); iter.hasNext(); i++) {
-			ParameterInfo info= (ParameterInfo) iter.next();
+		for (Iterator<ParameterInfo> iter= getNotDeletedInfos().iterator(); iter.hasNext(); i++) {
+			ParameterInfo info= iter.next();
 			Expression newExpression= createNewExpression(info, getParameterInfos(), superCall.arguments(), cuRewrite, (FunctionDeclaration) ASTNodes.getParent(superCall, FunctionDeclaration.class));
 			if (newExpression != null)
 				superCall.arguments().add(newExpression);
@@ -1416,20 +1393,20 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 	private FunctionDeclaration[] getAllConstructors(AbstractTypeDeclaration typeDeclaration) {
 		BodyDeclaration decl;
-		List result= new ArrayList(1);
-		for (Iterator it = typeDeclaration.bodyDeclarations().listIterator(); it.hasNext(); ) {
-			decl= (BodyDeclaration) it.next();
+		List<FunctionDeclaration> result= new ArrayList<FunctionDeclaration>(1);
+		for (Iterator<BodyDeclaration> it = typeDeclaration.bodyDeclarations().listIterator(); it.hasNext(); ) {
+			decl= it.next();
 			if (decl instanceof FunctionDeclaration && ((FunctionDeclaration) decl).isConstructor())
-				result.add(decl);
+				result.add((FunctionDeclaration)decl);
 		}
-		return (FunctionDeclaration[]) result.toArray(new FunctionDeclaration[result.size()]);
+		return result.toArray(new FunctionDeclaration[result.size()]);
 	}
 	
 	private boolean isNoArgConstructor() throws JavaScriptModelException {
 		return fMethod.isConstructor() && fMethod.getNumberOfParameters() == 0;
 	}
 	
-	private Expression createNewExpression(ParameterInfo info, List parameterInfos, List nodes, CompilationUnitRewrite cuRewrite, FunctionDeclaration method) {
+	private Expression createNewExpression(ParameterInfo info, List<ParameterInfo> parameterInfos, List<ASTNode> nodes, CompilationUnitRewrite cuRewrite, FunctionDeclaration method) {
 		if (info.isNewVarargs() && info.getDefaultValue().trim().length() == 0)
 			return null;
 		else {
@@ -1565,26 +1542,25 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			// }
 			
 			ListRewrite listRewrite= getParamgumentsRewrite();
-			Map newOldMap= new LinkedHashMap();
-			List nodes= listRewrite.getRewrittenList();
-			Iterator rewriteIter= nodes.iterator();
-			List original= listRewrite.getOriginalList();
-			for (Iterator iter= original.iterator(); iter.hasNext();) {
+			Map<ASTNode, ASTNode> newOldMap= new LinkedHashMap<ASTNode, ASTNode>();
+			List<ASTNode> nodes= listRewrite.getRewrittenList();
+			Iterator<ASTNode> rewriteIter= nodes.iterator();
+			List<ASTNode> original= listRewrite.getOriginalList();
+			for (Iterator<ASTNode> iter= original.iterator(); iter.hasNext();) {
 				newOldMap.put(rewriteIter.next(),iter.next());
 			}
-			List newNodes= new ArrayList();
+			List<ASTNode> newNodes= new ArrayList<ASTNode>();
 			// register removed nodes, and collect nodes in new sequence:
-			for (int i= 0; i < fParameterInfos.size(); i++) {
-				ParameterInfo info= (ParameterInfo) fParameterInfos.get(i);
+			for (ParameterInfo info : fParameterInfos) {
 				int oldIndex= info.getOldIndex();
 				
 				if (info.isDeleted()) {
 					if (oldIndex != fOldVarargIndex) {
-						registerImportRemoveNode((ASTNode) nodes.get(oldIndex));
+						registerImportRemoveNode(nodes.get(oldIndex));
 					} else {
 						//vararg deleted -> remove all remaining nodes:
 						for (int n= oldIndex; n < nodes.size(); n++) {
-							registerImportRemoveNode((ASTNode) nodes.get(n));
+							registerImportRemoveNode(nodes.get(n));
 						}
 					}
 					
@@ -1595,13 +1571,13 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 					
 				} else /* parameter stays */ {
 					if (oldIndex != fOldVarargIndex) {
-						ASTNode oldNode= (ASTNode) nodes.get(oldIndex);
+						ASTNode oldNode= nodes.get(oldIndex);
 						ASTNode movedNode= moveNode(oldNode, getASTRewrite());
 						newNodes.add(movedNode);
 					} else {
 						//vararg stays and is last parameter -> copy all remaining nodes:
 						for (int n= oldIndex; n < nodes.size(); n++) {
-							ASTNode oldNode= (ASTNode) nodes.get(n);
+							ASTNode oldNode= nodes.get(n);
 							ASTNode movedNode= moveNode(oldNode, getASTRewrite());
 							newNodes.add(movedNode);
 						}
@@ -1609,28 +1585,28 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				}
 			}
 			
-			Iterator nodesIter= nodes.iterator();
-			Iterator newIter= newNodes.iterator();
+			Iterator<ASTNode> nodesIter= nodes.iterator();
+			Iterator<ASTNode> newIter= newNodes.iterator();
 			//replace existing nodes with new ones:
 			while (nodesIter.hasNext() && newIter.hasNext()) {
-				ASTNode node= (ASTNode) nodesIter.next();
-				ASTNode newNode= (ASTNode) newIter.next();
+				ASTNode node= nodesIter.next();
+				ASTNode newNode= newIter.next();
 				if (!ASTNodes.isExistingNode(node)) //XXX:should better be addressed in ListRewriteEvent.replaceEntry(ASTNode, ASTNode)
-					listRewrite.replace((ASTNode) newOldMap.get(node), newNode, fDescription);
+					listRewrite.replace(newOldMap.get(node), newNode, fDescription);
 				else
 					listRewrite.replace(node, newNode, fDescription);
 			}
 			//remove remaining existing nodes:
 			while (nodesIter.hasNext()) {
-				ASTNode node= (ASTNode) nodesIter.next();
+				ASTNode node= nodesIter.next();
 				if (!ASTNodes.isExistingNode(node))
-					listRewrite.remove((ASTNode) newOldMap.get(node), fDescription);
+					listRewrite.remove(newOldMap.get(node), fDescription);
 				else
 					listRewrite.remove(node, fDescription);
 			}
 			//add additional new nodes:
 			while (newIter.hasNext()) {
-				ASTNode node= (ASTNode) newIter.next();
+				ASTNode node= newIter.next();
 				listRewrite.insertLast(node, fDescription);
 			}
 		}
@@ -1641,8 +1617,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		protected abstract ListRewrite getParamgumentsRewrite();
 		
 		protected final void changeParamguments() {
-			for (Iterator iter= getParameterInfos().iterator(); iter.hasNext();) {
-				ParameterInfo info= (ParameterInfo) iter.next();
+			for (ParameterInfo info : (List<ParameterInfo>)getParameterInfos()) {
 				if (info.isAdded() || info.isDeleted())
 					continue;
 				
@@ -1675,7 +1650,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		 * @param nodes TODO
 		 * @return a new method parameter or argument, or <code>null</code> for an empty vararg argument
 		 */
-		protected abstract ASTNode createNewParamgument(ParameterInfo info, List parameterInfos, List nodes);
+		protected abstract ASTNode createNewParamgument(ParameterInfo info, List/*<ParameterInfo>*/ parameterInfos, List nodes);
 
 		protected abstract SimpleName getMethodNameNode();
 
@@ -1744,7 +1719,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			return null;
 		}
 		
-		protected ASTNode createNewParamgument(ParameterInfo info, List parameterInfos, List nodes) {
+		protected ASTNode createNewParamgument(ParameterInfo info, List/*<ParameterInfo>*/ parameterInfos, List/*<ASTNode>*/ nodes) {
 			CompilationUnitRewrite cuRewrite= getCompilationUnitRewrite();
 			FunctionDeclaration declaration= (FunctionDeclaration) ASTNodes.getParent(fNode, FunctionDeclaration.class);
 			if (isRecursiveReference()) {
@@ -1753,7 +1728,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				return createNewExpression(info, parameterInfos, nodes, cuRewrite, declaration);
 		}
 
-		private Expression createNewExpressionRecursive(ParameterInfo info, List parameterInfos, List nodes, CompilationUnitRewrite cuRewrite, FunctionDeclaration methodDeclaration) {
+		private Expression createNewExpressionRecursive(ParameterInfo info, List<ParameterInfo> parameterInfos, List<ASTNode> nodes, CompilationUnitRewrite cuRewrite, FunctionDeclaration methodDeclaration) {
 			if (fDefaultValueAdvisor != null && info.isAdded()) {
 				return fDefaultValueAdvisor.createDefaultExpression(nodes, info, parameterInfos, methodDeclaration, true, cuRewrite);
 			}
@@ -1924,7 +1899,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 
 		private void removeExtraDimensions(SingleVariableDeclaration oldParam) {
 			if (oldParam.getExtraDimensions() != 0) {		
-				getASTRewrite().set(oldParam, SingleVariableDeclaration.EXTRA_DIMENSIONS_PROPERTY, new Integer(0), fDescription);
+				getASTRewrite().set(oldParam, SingleVariableDeclaration.EXTRA_DIMENSIONS_PROPERTY, Integer.valueOf(0), fDescription);
 			}
 		}
 	
@@ -1939,7 +1914,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 		private void removeExtraDimensions(FunctionDeclaration methDecl) {
 			if (methDecl.getExtraDimensions() != 0)
-				getASTRewrite().set(methDecl, FunctionDeclaration.EXTRA_DIMENSIONS_PROPERTY, new Integer(0), fDescription);
+				getASTRewrite().set(methDecl, FunctionDeclaration.EXTRA_DIMENSIONS_PROPERTY, Integer.valueOf(0), fDescription);
 		}
 
 		private boolean needsVisibilityUpdate() throws JavaScriptModelException {
@@ -1960,8 +1935,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		}
 	
 		private void changeExceptions() {
-			for (Iterator iter= fExceptionInfos.iterator(); iter.hasNext();) {
-				ExceptionInfo info= (ExceptionInfo) iter.next();
+			for (ExceptionInfo info : fExceptionInfos) {
 				if (info.isOld())
 					continue;
 				if (info.isDeleted())
@@ -1971,10 +1945,9 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			}
 		}
 		
-		private void removeExceptionFromNodeList(ExceptionInfo toRemove, List exceptionsNodeList) {
+		private void removeExceptionFromNodeList(ExceptionInfo toRemove, List<Name> exceptionsNodeList) {
 			ITypeBinding typeToRemove= toRemove.getTypeBinding();
-			for (Iterator iter= exceptionsNodeList.iterator(); iter.hasNext(); ) {
-				Name currentName= (Name) iter.next();
+			for (Name currentName : exceptionsNodeList) {
 				ITypeBinding currentType= currentName.resolveTypeBinding();
 				/* Maybe remove all subclasses of typeToRemove too.
 				 * Problem:
@@ -1995,8 +1968,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 	
 		private void addExceptionToNodeList(ExceptionInfo exceptionInfo, ListRewrite exceptionListRewrite) {
 			String fullyQualified= JavaModelUtil.getFullyQualifiedName(exceptionInfo.getType());
-			for (Iterator iter= exceptionListRewrite.getOriginalList().iterator(); iter.hasNext(); ) {
-				Name exName= (Name) iter.next();
+			for (Iterator<Name> iter= exceptionListRewrite.getOriginalList().iterator(); iter.hasNext(); ) {
+				Name exName= iter.next();
 				//XXX: existing superclasses of the added exception are redundant and could be removed
 				ITypeBinding typeBinding= exName.resolveTypeBinding();
 				if (typeBinding == null)
@@ -2027,13 +2000,12 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			//add tags: only iff top of ripple; change and remove: always.
 			//TODO: should have preference for adding tags in (overriding) methods (with template: todo, inheritDoc, ...)
 			
-			List tags= javadoc.tags(); // List of TagElement
+			List<TagElement> tags= javadoc.tags(); // List of TagElement
 			ListRewrite tagsRewrite= getASTRewrite().getListRewrite(javadoc, JSdoc.TAGS_PROPERTY);
 
 			if (! isReturnTypeSameAsInitial()) {
 				if (PrimitiveType.VOID.toString().equals(fReturnTypeInfo.getNewTypeName())) {
-					for (int i = 0; i < tags.size(); i++) {
-						TagElement tag= (TagElement) tags.get(i);
+					for (TagElement tag : tags) {
 						if (TagElement.TAG_RETURN.equals(tag.getTagName())) {
 							getASTRewrite().remove(tag, fDescription);
 							registerImportRemoveNode(tag);
@@ -2048,19 +2020,17 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			}
 			
 			if (! (areNamesSameAsInitial() && isOrderSameAsInitial())) {
-				ArrayList paramTags= new ArrayList(); // <TagElement>, only not deleted tags with simpleName
+				ArrayList<TagElement> paramTags= new ArrayList<TagElement>(); // <TagElement>, only not deleted tags with simpleName
 				// delete & rename:
-				for (Iterator iter = tags.iterator(); iter.hasNext(); ) {
-					TagElement tag = (TagElement) iter.next();
+				for (TagElement tag : tags) {
 					String tagName= tag.getTagName();
-					List fragments= tag.fragments();
+					List<Name> fragments= tag.fragments();
 					if (! (TagElement.TAG_PARAM.equals(tagName) && fragments.size() > 0 && fragments.get(0) instanceof SimpleName))
 						continue;
 					SimpleName simpleName= (SimpleName) fragments.get(0);
 					String identifier= simpleName.getIdentifier();
 					boolean removed= false;
-					for (int i= 0; i < fParameterInfos.size(); i++) {
-						ParameterInfo info= (ParameterInfo) fParameterInfos.get(i);
+					for (ParameterInfo info : fParameterInfos) {
 						if (identifier.equals(info.getOldName())) {
 							if (info.isDeleted()) {
 								getASTRewrite().remove(tag, fDescription);
@@ -2084,8 +2054,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 					TagElement previousTag= findTagElementToInsertAfter(tags, TagElement.TAG_PARAM);
 					boolean first= true; // workaround for bug 92111: preserve first tag if possible
 					// reshuffle:
-					for (Iterator infoIter= fParameterInfos.iterator(); infoIter.hasNext();) {
-						ParameterInfo info= (ParameterInfo) infoIter.next();
+					for (ParameterInfo info : fParameterInfos) {
 						String oldName= info.getOldName();
 						String newName= info.getNewName();
 						if (info.isAdded()) {
@@ -2096,8 +2065,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 							insertTag(paramNode, previousTag, tagsRewrite);
 							previousTag= paramNode;
 						} else {
-							for (Iterator tagIter= paramTags.iterator(); tagIter.hasNext();) {
-								TagElement tag= (TagElement) tagIter.next();
+							for (Iterator<TagElement> tagIter= paramTags.iterator(); tagIter.hasNext();) {
+								TagElement tag= tagIter.next();
 								SimpleName tagName= (SimpleName) tag.fragments().get(0);
 								if (oldName.equals(tagName.getIdentifier())) {
 									tagIter.remove();
@@ -2115,8 +2084,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 						}
 					}
 					// params with bad names:
-					for (Iterator iter= paramTags.iterator(); iter.hasNext();) {
-						TagElement tag= (TagElement) iter.next();
+					for (TagElement tag : paramTags) {
 						TagElement movedTag= (TagElement) getASTRewrite().createMoveTarget(tag);
 						getASTRewrite().remove(tag, fDescription);
 						insertTag(movedTag, previousTag, tagsRewrite);
@@ -2128,17 +2096,15 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			
 			if (! areExceptionsSameAsInitial()) {
 				// collect exceptionTags and remove deleted:
-				ArrayList exceptionTags= new ArrayList(); // <TagElement>, only not deleted tags with name
-				for (int i= 0; i < tags.size(); i++) {
-					TagElement tag= (TagElement) tags.get(i);
+				ArrayList<TagElement> exceptionTags= new ArrayList<TagElement>(); // <TagElement>, only not deleted tags with name
+				for (TagElement tag : tags) {
 					if (! TagElement.TAG_THROWS.equals(tag.getTagName()) && ! TagElement.TAG_EXCEPTION.equals(tag.getTagName()))
 						continue;
 					if (! (tag.fragments().size() > 0 && tag.fragments().get(0) instanceof Name))
 						continue;
 					boolean tagDeleted= false;
 					Name name= (Name) tag.fragments().get(0);
-					for (int j= 0; j < fExceptionInfos.size(); j++) {
-						ExceptionInfo info= (ExceptionInfo) fExceptionInfos.get(j);
+					for (ExceptionInfo info : fExceptionInfos) {
 						if (info.isDeleted()) {
 							boolean remove= false;
 							final ITypeBinding nameBinding= name.resolveTypeBinding();
@@ -2163,8 +2129,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				// reshuffle:
 				tags= tagsRewrite.getRewrittenList();
 				TagElement previousTag= findTagElementToInsertAfter(tags, TagElement.TAG_THROWS);
-				for (Iterator infoIter= fExceptionInfos.iterator(); infoIter.hasNext();) {
-					ExceptionInfo info= (ExceptionInfo) infoIter.next();
+				for (ExceptionInfo info : fExceptionInfos) {
 					if (info.isAdded()) {
 						if (!isTopOfRipple)
 							continue;
@@ -2172,8 +2137,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 						insertTag(excptNode, previousTag, tagsRewrite);
 						previousTag= excptNode;
 					} else {
-						for (Iterator tagIter= exceptionTags.iterator(); tagIter.hasNext();) {
-							TagElement tag= (TagElement) tagIter.next();
+						for (Iterator<TagElement> tagIter= exceptionTags.iterator(); tagIter.hasNext();) {
+							TagElement tag= tagIter.next();
 							Name tagName= (Name) tag.fragments().get(0);
 							final ITypeBinding nameBinding= tagName.resolveTypeBinding();
 							if (nameBinding != null) {
@@ -2195,8 +2160,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 					}
 				}
 				// exceptions with bad names:
-				for (Iterator iter= exceptionTags.iterator(); iter.hasNext();) {
-					TagElement tag= (TagElement) iter.next();
+				for (TagElement tag : exceptionTags) {
 					TagElement movedTag= (TagElement) getASTRewrite().createMoveTarget(tag);
 					getASTRewrite().remove(tag, fDescription);
 					insertTag(movedTag, previousTag, tagsRewrite);
@@ -2247,8 +2211,8 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 		 * @return the <code>TagElement<code> just before a new <code>TagElement</code> with name <code>tagName</code>,
 		 *   or <code>null</code>.
 		 */
-		private TagElement findTagElementToInsertAfter(List tags, String tagName) {
-			List tagOrder= Arrays.asList(new String[] {
+		private TagElement findTagElementToInsertAfter(List<TagElement> tags, String tagName) {
+			List<String> tagOrder= Arrays.asList(new String[] {
 					TagElement.TAG_AUTHOR,
 					TagElement.TAG_VERSION,
 					TagElement.TAG_PARAM,
@@ -2267,7 +2231,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			if (goalOrdinal == -1) // unknown tag -> to end
 				return (tags.size() == 0) ? null : (TagElement) tags.get(tags.size());
 			for (int i= 0; i < tags.size(); i++) {
-				int tagOrdinal= tagOrder.indexOf(((TagElement) tags.get(i)).getTagName());
+				int tagOrdinal= tagOrder.indexOf(tags.get(i).getTagName());
 				if (tagOrdinal >= goalOrdinal)
 					return (i == 0) ? null : (TagElement) tags.get(i-1);
 			}
@@ -2276,8 +2240,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 
 		//TODO: already reported as compilation error -> don't report there?
 		private void checkIfDeletedParametersUsed() {
-			for (Iterator iter= getDeletedInfos().iterator(); iter.hasNext();) {
-				ParameterInfo info= (ParameterInfo) iter.next();
+			for (ParameterInfo info : getDeletedInfos()) {
 				SingleVariableDeclaration paramDecl= (SingleVariableDeclaration) fMethDecl.parameters().get(info.getOldIndex());
 				TempOccurrenceAnalyzer analyzer= new TempOccurrenceAnalyzer(paramDecl, false);
 				analyzer.perform();
@@ -2518,7 +2481,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 			int count= 1;
 			String attribute= ATTRIBUTE_PARAMETER + count;
 			String value= null;
-			fParameterInfos= new ArrayList(3);
+			fParameterInfos= new ArrayList<ParameterInfo>(3);
 			while ((value= extended.getAttribute(attribute)) != null) {
 				StringTokenizer tokenizer= new StringTokenizer(value);
 				if (tokenizer.countTokens() < 6)
@@ -2531,7 +2494,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				String deleted= tokenizer.nextToken();
 				ParameterInfo info= null;
 				try {
-					info= new ParameterInfo(oldTypeName, oldName, Integer.valueOf(oldIndex).intValue());
+					info= new ParameterInfo(oldTypeName, oldName, Integer.parseInt(oldIndex));
 					info.setNewTypeName(newTypeName);
 					info.setNewName(newName);
 					if (Boolean.valueOf(deleted).booleanValue())
@@ -2547,7 +2510,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 				attribute= ATTRIBUTE_PARAMETER + count;
 			}
 			count= 1;
-			fExceptionInfos= new ArrayList(2);
+			fExceptionInfos= new ArrayList<ExceptionInfo>(2);
 			attribute= JDTRefactoringDescriptor.ATTRIBUTE_ELEMENT + count;
 			while ((value= extended.getAttribute(attribute)) != null) {
 				ExceptionInfo info= null;
@@ -2558,7 +2521,7 @@ public class ChangeSignatureRefactoring extends ScriptableRefactoring implements
 						return createInputFatalStatus(element, IJavaScriptRefactorings.CHANGE_METHOD_SIGNATURE);
 					else {
 						try {
-							info= new ExceptionInfo((IType) element, Integer.valueOf(kind).intValue(), null);
+							info= new ExceptionInfo((IType) element, Integer.parseInt(kind), null);
 						} catch (NumberFormatException exception) {
 							return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_illegal_argument, ATTRIBUTE_KIND));
 						}

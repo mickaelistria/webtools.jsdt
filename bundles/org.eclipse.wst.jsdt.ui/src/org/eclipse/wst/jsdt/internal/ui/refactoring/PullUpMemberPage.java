@@ -14,9 +14,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -62,8 +62,8 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.wst.jsdt.core.IField;
-import org.eclipse.wst.jsdt.core.IMember;
 import org.eclipse.wst.jsdt.core.IFunction;
+import org.eclipse.wst.jsdt.core.IMember;
 import org.eclipse.wst.jsdt.core.IType;
 import org.eclipse.wst.jsdt.core.JavaScriptModelException;
 import org.eclipse.wst.jsdt.internal.corext.refactoring.structure.HierarchyProcessor;
@@ -101,7 +101,7 @@ public class PullUpMemberPage extends UserInputWizardPage {
 			if (!ACTION_PROPERTY.equals(property))
 				return null;
 			final MemberActionInfo info= (MemberActionInfo) element;
-			return new Integer(info.getAction());
+			return Integer.valueOf(info.getAction());
 		}
 
 		public void modify(final Object element, final String property, final Object value) {
@@ -282,8 +282,8 @@ public class PullUpMemberPage extends UserInputWizardPage {
 		return result;
 	}
 
-	private static void putToStringMapping(final Map result, final String[] actionLabels, final int actionIndex) {
-		result.put(actionLabels[actionIndex], new Integer(actionIndex));
+	private static void putToStringMapping(final Map<String, Integer> result, final String[] actionLabels, final int actionIndex) {
+		result.put(actionLabels[actionIndex], Integer.valueOf(actionIndex));
 	}
 
 	private static void setActionForInfos(final MemberActionInfo[] infos, final int action) {
@@ -344,7 +344,7 @@ public class PullUpMemberPage extends UserInputWizardPage {
 
 	private MemberActionInfo[] asMemberActionInfos() {
 		final PullUpRefactoringProcessor processor= getPullUpRefactoring().getPullUpProcessor();
-		final List toPullUp= Arrays.asList(processor.getMembersToMove());
+		final List<IMember> toPullUp= Arrays.asList(processor.getMembersToMove());
 		final IMember[] members= processor.getPullableMembersOfDeclaringType();
 		final MemberActionInfo[] result= new MemberActionInfo[members.length];
 		for (int i= 0; i < members.length; i++) {
@@ -607,9 +607,8 @@ public class PullUpMemberPage extends UserInputWizardPage {
 		fStatusLine.setLayoutData(data);
 	}
 
-	// String -> Integer
-	private Map createStringMappingForSelectedMembers() {
-		final Map result= new HashMap();
+	private Map<String, Integer> createStringMappingForSelectedMembers() {
+		final Map<String, Integer> result= new HashMap<String, Integer>();
 		putToStringMapping(result, METHOD_LABELS, PULL_UP_ACTION);
 		putToStringMapping(result, METHOD_LABELS, DECLARE_ABSTRACT_ACTION);
 		return result;
@@ -688,15 +687,15 @@ public class PullUpMemberPage extends UserInputWizardPage {
 		try {
 			final String shellTitle= RefactoringMessages.PullUpInputPage1_Edit_members;
 			final String labelText= RefactoringMessages.PullUpInputPage1_Mark_selected_members;
-			final Map stringMapping= createStringMappingForSelectedMembers();
-			final String[] keys= (String[]) stringMapping.keySet().toArray(new String[stringMapping.keySet().size()]);
+			final Map<String, Integer> stringMapping= createStringMappingForSelectedMembers();
+			final String[] keys= stringMapping.keySet().toArray(new String[stringMapping.keySet().size()]);
 			Arrays.sort(keys);
 			final int initialSelectionIndex= getInitialSelectionIndexForEditDialog(stringMapping, keys);
 			final ComboSelectionDialog dialog= new ComboSelectionDialog(getShell(), shellTitle, labelText, keys, initialSelectionIndex);
 			dialog.setBlockOnOpen(true);
 			if (dialog.open() == Window.CANCEL)
 				return;
-			final int action= ((Integer) stringMapping.get(dialog.getSelectedString())).intValue();
+			final int action= stringMapping.get(dialog.getSelectedString()).intValue();
 			setActionForInfos(getSelectedMembers(), action);
 		} finally {
 			updateWizardPage(preserved, true);
@@ -711,13 +710,12 @@ public class PullUpMemberPage extends UserInputWizardPage {
 
 	private MemberActionInfo[] getActiveInfos() {
 		final MemberActionInfo[] infos= getTableInput();
-		final List result= new ArrayList(infos.length);
-		for (int i= 0; i < infos.length; i++) {
-			final MemberActionInfo info= infos[i];
+		final List<MemberActionInfo> result= new ArrayList<MemberActionInfo>(infos.length);
+		for (MemberActionInfo info : infos) {
 			if (info.isActive())
 				result.add(info);
 		}
-		return (MemberActionInfo[]) result.toArray(new MemberActionInfo[result.size()]);
+		return result.toArray(new MemberActionInfo[result.size()]);
 	}
 
 	private int getCommonActionCodeForSelectedInfos() {
@@ -748,13 +746,13 @@ public class PullUpMemberPage extends UserInputWizardPage {
 		return null;
 	}
 
-	private int getInitialSelectionIndexForEditDialog(final Map stringMapping, final String[] keys) {
+	private int getInitialSelectionIndexForEditDialog(final Map<String, Integer> stringMapping, final String[] keys) {
 		final int commonActionCode= getCommonActionCodeForSelectedInfos();
 		if (commonActionCode == -1)
 			return 0;
-		for (final Iterator iter= stringMapping.keySet().iterator(); iter.hasNext();) {
-			final String key= (String) iter.next();
-			final int action= ((Integer) stringMapping.get(key)).intValue();
+		for (Entry<String, Integer> entry : stringMapping.entrySet()) {
+			final String key= entry.getKey();
+			final int action= entry.getValue().intValue();
 			if (commonActionCode == action) {
 				for (int i= 0; i < keys.length; i++) {
 					if (key.equals(keys[i]))
@@ -772,32 +770,32 @@ public class PullUpMemberPage extends UserInputWizardPage {
 
 	private IMember[] getMembers() {
 		final MemberActionInfo[] infos= getTableInput();
-		final List result= new ArrayList(infos.length);
-		for (int index= 0; index < infos.length; index++) {
-			result.add(infos[index].getMember());
+		final List<IMember> result= new ArrayList<IMember>(infos.length);
+		for (MemberActionInfo info : infos) {
+			result.add(info.getMember());
 		}
-		return (IMember[]) result.toArray(new IMember[result.size()]);
+		return result.toArray(new IMember[result.size()]);
 	}
 
 	private IMember[] getMembersForAction(final int action) {
 		final MemberActionInfo[] infos= getTableInput();
-		final List result= new ArrayList(infos.length);
-		for (int index= 0; index < infos.length; index++) {
-			if (infos[index].getAction() == action)
-				result.add(infos[index].getMember());
+		final List<IMember> result= new ArrayList<IMember>(infos.length);
+		for (MemberActionInfo info : infos) {
+			if (info.getAction() == action)
+				result.add(info.getMember());
 		}
-		return (IMember[]) result.toArray(new IMember[result.size()]);
+		return result.toArray(new IMember[result.size()]);
 	}
 
 	private IFunction[] getMethodsForAction(final int action) {
 		final MemberActionInfo[] infos= getTableInput();
-		final List list= new ArrayList(infos.length);
-		for (int index= 0; index < infos.length; index++) {
-			if (infos[index].isMethodInfo() && infos[index].getAction() == action) {
-				list.add(infos[index].getMember());
+		final List<IFunction> list= new ArrayList<IFunction>(infos.length);
+		for (MemberActionInfo info : infos) {
+			if (info.isMethodInfo() && info.getAction() == action) {
+				list.add((IFunction)info.getMember());
 			}
 		}
-		return (IFunction[]) list.toArray(new IFunction[list.size()]);
+		return list.toArray(new IFunction[list.size()]);
 	}
 
 	public IWizardPage getNextPage() {
@@ -843,7 +841,7 @@ public class PullUpMemberPage extends UserInputWizardPage {
 	private void initializeCheckBox(final Button checkbox, final String property, final boolean def) {
 		final String s= JavaScriptPlugin.getDefault().getDialogSettings().get(property);
 		if (s != null)
-			checkbox.setSelection(new Boolean(s).booleanValue());
+			checkbox.setSelection(Boolean.parseBoolean(s));
 		else
 			checkbox.setSelection(def);
 	}
@@ -912,7 +910,7 @@ public class PullUpMemberPage extends UserInputWizardPage {
 					return;
 				final MemberActionInfo info= (MemberActionInfo) structured.getFirstElement();
 				editor.setItems(info.getAllowedLabels());
-				editor.setValue(new Integer(info.getAction()));
+				editor.setValue(Integer.valueOf(info.getAction()));
 			}
 		});
 

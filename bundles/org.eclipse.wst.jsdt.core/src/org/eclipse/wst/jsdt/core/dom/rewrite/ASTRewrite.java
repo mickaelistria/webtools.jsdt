@@ -606,6 +606,7 @@ public class ASTRewrite {
 	 * is not part of this rewriter's AST
 	 */
 	public final ASTNode createMoveTarget(ASTNode node) {
+		// TODO, should be typed: <T extends ASTNode> ASTNode createMoveTarget(T target)
 		return createTargetNode(node, true);
 	}
 

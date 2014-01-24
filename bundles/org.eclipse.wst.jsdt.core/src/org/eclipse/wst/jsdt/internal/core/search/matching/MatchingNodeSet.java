@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.search.matching;
 
@@ -31,9 +32,9 @@ public class MatchingNodeSet {
  */
 SimpleLookupTable matchingNodes = new SimpleLookupTable(3); // node -> accuracy
 private HashtableOfLong matchingNodesKeys = new HashtableOfLong(3); // sourceRange -> node
-static Integer EXACT_MATCH = new Integer(SearchMatch.A_ACCURATE);
-static Integer POTENTIAL_MATCH = new Integer(SearchMatch.A_INACCURATE);
-static Integer ERASURE_MATCH = new Integer(SearchPattern.R_ERASURE_MATCH);
+static Integer EXACT_MATCH = Integer.valueOf(SearchMatch.A_ACCURATE);
+static Integer POTENTIAL_MATCH = Integer.valueOf(SearchMatch.A_INACCURATE);
+static Integer ERASURE_MATCH = Integer.valueOf(SearchPattern.R_ERASURE_MATCH);
 
 /**
  * Tell whether locators need to resolve or not for current matching node set.
@@ -58,7 +59,7 @@ public int addMatch(ASTNode node, int matchLevel) {
 	switch (maskedLevel) {
 		case PatternLocator.INACCURATE_MATCH:
 			if (matchLevel != maskedLevel) {
-				addTrustedMatch(node, new Integer(SearchMatch.A_INACCURATE+(matchLevel & PatternLocator.FLAVORS_MASK)));
+				addTrustedMatch(node, Integer.valueOf(SearchMatch.A_INACCURATE+(matchLevel & PatternLocator.FLAVORS_MASK)));
 			} else {
 				addTrustedMatch(node, POTENTIAL_MATCH);
 			}
@@ -68,14 +69,14 @@ public int addMatch(ASTNode node, int matchLevel) {
 			break;
 		case PatternLocator.ERASURE_MATCH:
 			if (matchLevel != maskedLevel) {
-				addTrustedMatch(node, new Integer(SearchPattern.R_ERASURE_MATCH+(matchLevel & PatternLocator.FLAVORS_MASK)));
+				addTrustedMatch(node, Integer.valueOf(SearchPattern.R_ERASURE_MATCH+(matchLevel & PatternLocator.FLAVORS_MASK)));
 			} else {
 				addTrustedMatch(node, ERASURE_MATCH);
 			}
 			break;
 		case PatternLocator.ACCURATE_MATCH:
 			if (matchLevel != maskedLevel) {
-				addTrustedMatch(node, new Integer(SearchMatch.A_ACCURATE+(matchLevel & PatternLocator.FLAVORS_MASK)));
+				addTrustedMatch(node, Integer.valueOf(SearchMatch.A_ACCURATE+(matchLevel & PatternLocator.FLAVORS_MASK)));
 			} else {
 				addTrustedMatch(node, EXACT_MATCH);
 			}
@@ -132,14 +133,14 @@ protected boolean hasPossibleNodes(int start, int end) {
  * Returns the matching nodes that are in the given range in the source order.
  */
 protected ASTNode[] matchingNodes(int start, int end) {
-	ArrayList nodes = null;
+	ArrayList<ASTNode> nodes = null;
 	Object[] keyTable = this.matchingNodes.keyTable;
 	for (int i = 0, l = keyTable.length; i < l; i++) {
 		ASTNode node = (ASTNode) keyTable[i];
 		if (node != null && start <= node.sourceStart && node.sourceEnd <= end) {
 			if (!node.isInferred())
 			{
-				if (nodes == null) nodes = new ArrayList();
+				if (nodes == null) nodes = new ArrayList<ASTNode>();
 				nodes.add(node);
 			}
 		}

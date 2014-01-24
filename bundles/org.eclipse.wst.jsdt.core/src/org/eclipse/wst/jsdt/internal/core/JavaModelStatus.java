@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -351,7 +352,7 @@ public class JavaModelStatus extends Status implements IJavaScriptModelStatus, I
 					javaProject = (IJavaScriptProject)elements[0];
 					String projectName = javaProject.getElementName();
 					IPath newPath = path;
-					if (path.segment(0).toString().equals(projectName)) {
+					if (path.segment(0).equals(projectName)) {
 						newPath = path.removeFirstSegments(1);
 					}
 					return Messages.bind(Messages.classpath_disabledInclusionExclusionPatterns, new String[] {newPath.makeRelative().toString(), projectName});

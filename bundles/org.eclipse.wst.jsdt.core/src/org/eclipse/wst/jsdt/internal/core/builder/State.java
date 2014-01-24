@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.builder;
 
@@ -136,7 +137,7 @@ boolean isDuplicateLocator(String qualifiedTypeName, String typeLocator) {
 
 boolean isKnownPackage(String qualifiedPackageName) {
 	if (knownPackageNames == null) {
-		ArrayList names = new ArrayList(typeLocators.elementSize);
+		ArrayList<String> names = new ArrayList<String>(typeLocators.elementSize);
 		Object[] keyTable = typeLocators.keyTable;
 		for (int i = 0, l = keyTable.length; i < l; i++) {
 			if (keyTable[i] != null) {
@@ -165,7 +166,7 @@ boolean isKnownType(String qualifiedTypeName) {
 
 void record(String typeLocator, char[][][] qualifiedRefs, char[][] simpleRefs, char[] mainTypeName, ArrayList typeNames) {
 	if (typeNames==null)
-		typeNames=new ArrayList();
+		typeNames=new ArrayList<String>();
 	if (typeNames.size() == 1 && CharOperation.equals(mainTypeName, (char[]) typeNames.get(0))) {
 		references.put(typeLocator, new ReferenceCollection(qualifiedRefs, simpleRefs));
 	} else {
@@ -187,7 +188,7 @@ void recordLocatorForType(String qualifiedTypeName, String typeLocator) {
 void recordStructuralDependency(IProject prereqProject, State prereqState) {
 	if (prereqState != null)
 		if (prereqState.lastStructuralBuildTime > 0) // can skip if 0 (full build) since its assumed to be 0 if unknown
-			structuralBuildTimes.put(prereqProject.getName(), new Long(prereqState.lastStructuralBuildTime));
+			structuralBuildTimes.put(prereqProject.getName(), Long.valueOf(prereqState.lastStructuralBuildTime));
 }
 
 void removeLocator(String typeLocatorToRemove) {
@@ -274,7 +275,7 @@ static State read(IProject project, DataInputStream in) throws IOException {
 
 	newState.structuralBuildTimes = new SimpleLookupTable(length = in.readInt());
 	for (int i = 0; i < length; i++)
-		newState.structuralBuildTimes.put(in.readUTF(), new Long(in.readLong()));
+		newState.structuralBuildTimes.put(in.readUTF(), Long.valueOf(in.readLong()));
 
 	String[] internedTypeLocators = new String[length = in.readInt()];
 	for (int i = 0; i < length; i++)
@@ -485,7 +486,7 @@ void write(DataOutputStream out) throws IOException {
 				length--;
 				String key = (String) keyTable[i];
 				out.writeUTF(key);
-				internedTypeLocators.put(key, new Integer(internedTypeLocators.elementSize));
+				internedTypeLocators.put(key, Integer.valueOf(internedTypeLocators.elementSize));
 			}
 		}
 		if (JavaBuilder.DEBUG && length != 0)
@@ -527,11 +528,11 @@ void write(DataOutputStream out) throws IOException {
 			for (int j = 0, m = qNames.length; j < m; j++) {
 				char[][] qName = qNames[j];
 				if (!internedQualifiedNames.containsKey(qName)) { // remember the names have been interned
-					internedQualifiedNames.put(qName, new Integer(internedQualifiedNames.elementSize));
+					internedQualifiedNames.put(qName, Integer.valueOf(internedQualifiedNames.elementSize));
 					for (int k = 0, n = qName.length; k < n; k++) {
 						char[] sName = qName[k];
 						if (!internedSimpleNames.containsKey(sName)) // remember the names have been interned
-							internedSimpleNames.put(sName, new Integer(internedSimpleNames.elementSize));
+							internedSimpleNames.put(sName, Integer.valueOf(internedSimpleNames.elementSize));
 					}
 				}
 			}
@@ -539,7 +540,7 @@ void write(DataOutputStream out) throws IOException {
 			for (int j = 0, m = sNames.length; j < m; j++) {
 				char[] sName = sNames[j];
 				if (!internedSimpleNames.containsKey(sName)) // remember the names have been interned
-					internedSimpleNames.put(sName, new Integer(internedSimpleNames.elementSize));
+					internedSimpleNames.put(sName, Integer.valueOf(internedSimpleNames.elementSize));
 			}
 		}
 	}

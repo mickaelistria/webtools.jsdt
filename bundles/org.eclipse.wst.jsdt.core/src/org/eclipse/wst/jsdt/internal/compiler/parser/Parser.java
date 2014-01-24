@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *       	 Etienne Pfister <epfister@hsr.ch> bug 224333
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.parser;
 
@@ -316,7 +317,7 @@ public class Parser implements  ParserBasicInformation, TerminalTokens, Operator
 
 	private int insertedSemicolonPosition=-1;
 
-	private Set errorAction = new HashSet();
+	private Set<Integer> errorAction = new HashSet<Integer>();
 	
 	private static final int  UNCONSUMED_LIT_ELEMENT=0x4;
 	private static final int  UNCONSUMED_ELISION=0x2;
@@ -420,7 +421,7 @@ private static void buildFileForReadableName(
 	String[] newName,
 	String[] tokens) {
 
-	ArrayList entries = new ArrayList();
+	ArrayList<String> entries = new ArrayList<String>();
 
 	boolean[] alreadyAdded = new boolean[newName.length];
 
@@ -477,7 +478,7 @@ private static void buildFilesForRecoveryTemplates(
 			newRecoveyTemplatesIndex[index] = (char)newRecoveyTemplatesPtr;
 
 			String token = tokens[i + 2].trim();
-			java.util.StringTokenizer st = new java.util.StringTokenizer(new String(token), " ");  //$NON-NLS-1$
+			java.util.StringTokenizer st = new java.util.StringTokenizer(token, " ");  //$NON-NLS-1$
 			String[] terminalNames = new String[st.countTokens()];
 			int t = 0;
 			while (st.hasMoreTokens()) {
@@ -2244,12 +2245,12 @@ protected void consumeGetSetPropertyAssignment(boolean isSetter) {
 	if (expression instanceof SingleNameReference) {
 		SingleNameReference reference = (SingleNameReference) expression;
 		if (isSetter) {
-			if (!CharOperation.equals(reference.token, "set".toCharArray())) {
+			if (!CharOperation.equals(reference.token, "set".toCharArray())) { //$NON-NLS-1$
 				// report error
 				//this.problemReporter().invalidValueForGetterSetter(expression, true);
 			}
 		} else {
-			if (!CharOperation.equals(reference.token, "get".toCharArray())) {
+			if (!CharOperation.equals(reference.token, "get".toCharArray())) { //$NON-NLS-1$
 				// report error
 				//this.problemReporter().invalidValueForGetterSetter(expression, false);
 			}
@@ -5304,7 +5305,7 @@ public void initialize(boolean initializeNLS) {
 	this.genericsLengthPtr = -1;
 	this.genericsPtr = -1;
 
-	this.errorAction= new HashSet(); 
+	this.errorAction= new HashSet<Integer>(); 
 	
 }
 public void initializeScanner(){
@@ -5832,36 +5833,32 @@ protected void parse() {
 
 	this.scanner.checkNonExternalizedStringLiterals = false;
 	if (this.reportSyntaxErrorIsRequired && this.hasError && !(this.statementRecoveryActivated && DO_DIET_PARSE)) {
-		if(!this.options.performStatementsRecovery) {
-			reportSyntaxErrors(isDietParse, oldFirstToken);
+		RecoveryScannerData data = this.referenceContext.compilationResult().recoveryScannerData;
+
+		if(this.recoveryScanner == null) {
+			this.recoveryScanner = new RecoveryScanner(this.scanner, data);
 		} else {
-			RecoveryScannerData data = this.referenceContext.compilationResult().recoveryScannerData;
+			this.recoveryScanner.setData(data);
+		}
 
-			if(this.recoveryScanner == null) {
-				this.recoveryScanner = new RecoveryScanner(this.scanner, data);
-			} else {
-				this.recoveryScanner.setData(data);
-			}
+		this.recoveryScanner.setSource(scanner.source);
+		this.recoveryScanner.lineEnds = this.scanner.lineEnds;
+		this.recoveryScanner.linePtr = this.scanner.linePtr;
 
-			this.recoveryScanner.setSource(scanner.source);
-			this.recoveryScanner.lineEnds = this.scanner.lineEnds;
-			this.recoveryScanner.linePtr = this.scanner.linePtr;
+		reportSyntaxErrors(isDietParse, oldFirstToken);
 
-			reportSyntaxErrors(isDietParse, oldFirstToken);
+		if(data == null) {
+			this.referenceContext.compilationResult().recoveryScannerData =
+				this.recoveryScanner.getData();
+		}
 
-			if(data == null) {
-				this.referenceContext.compilationResult().recoveryScannerData =
-					this.recoveryScanner.getData();
-			}
+		if (this.methodRecoveryActivated && this.options.performStatementsRecovery && !this.enteredRecoverStatements) {
+			this.methodRecoveryActivated = false;
+			this.enteredRecoverStatements=true;
+			this.recoverStatements();
+			this.methodRecoveryActivated = true;
 
-			if (this.methodRecoveryActivated && this.options.performStatementsRecovery && !this.enteredRecoverStatements) {
-				this.methodRecoveryActivated = false;
-				this.enteredRecoverStatements=true;
-				this.recoverStatements();
-				this.methodRecoveryActivated = true;
-
-				this.lastAct = ERROR_ACTION;
-			}
+			this.lastAct = ERROR_ACTION;
 		}
 	}
 
@@ -6040,7 +6037,7 @@ public CompilationUnitDeclaration parse(
 		}
 		/* run automaton */
 if (false)
-	System.out.println("parsing "+new String(sourceUnit.getFileName())); //$NON-NLS-1$
+	System.out.println("parsing "+sourceUnit.getFileName()); //$NON-NLS-1$
 		parse();
 	} finally {
 		unit = this.compilationUnit;
@@ -6786,7 +6783,7 @@ public void recoveryTokenCheck() {
 }
 
 protected boolean shouldInsertSemicolon(int prevpos, int prevtoken) {
-	Integer position = new Integer(prevpos);
+	Integer position = Integer.valueOf(prevpos);
 	if (this.errorAction.contains(position)) {
 		// should not insert a semi-colon at a location that has already be tried
 		return false;
@@ -6892,7 +6889,7 @@ protected void resetStacks() {
 	this.genericsIdentifiersLengthPtr = -1;
 	this.genericsLengthPtr = -1;
 	this.genericsPtr = -1;
-	this.errorAction = new HashSet();
+	this.errorAction = new HashSet<Integer>();
 }
 /*
  * Reset context so as to resume to regular parse loop
@@ -6985,57 +6982,57 @@ public void setStatementsRecovery(boolean enabled) {
 public String toString() {
 
 
-	String s = "lastCheckpoint : int = " + String.valueOf(this.lastCheckPoint) + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
-	s = s + "identifierStack : char["+(this.identifierPtr + 1)+"][] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	StringBuilder s = new StringBuilder("lastCheckpoint : int = ").append(String.valueOf(this.lastCheckPoint)).append("\n"); //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("identifierStack : char[").append(this.identifierPtr + 1).append("][] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.identifierPtr; i++) {
-		s = s + "\"" + String.valueOf(this.identifierStack[i]) + "\","; //$NON-NLS-1$ //$NON-NLS-2$
+		s.append("\"").append(String.valueOf(this.identifierStack[i])).append("\","); //$NON-NLS-1$ //$NON-NLS-2$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
+	s.append("}\n"); //$NON-NLS-1$
 
-	s = s + "identifierLengthStack : int["+(this.identifierLengthPtr + 1)+"] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("identifierLengthStack : int[").append(this.identifierLengthPtr + 1).append("] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.identifierLengthPtr; i++) {
-		s = s + this.identifierLengthStack[i] + ","; //$NON-NLS-1$
+		s.append(this.identifierLengthStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
+	s.append("}\n"); //$NON-NLS-1$
 
-	s = s + "astLengthStack : int["+(this.astLengthPtr + 1)+"] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("astLengthStack : int[").append(this.astLengthPtr + 1).append("] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.astLengthPtr; i++) {
-		s = s + this.astLengthStack[i] + ","; //$NON-NLS-1$
+		s.append(this.astLengthStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
-	s = s + "astPtr : int = " + String.valueOf(this.astPtr) + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append( "}\n"); //$NON-NLS-1$
+	s.append("astPtr : int = ").append(String.valueOf(this.astPtr)).append("\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
-	s = s + "intStack : int["+(this.intPtr + 1)+"] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("intStack : int[").append(this.intPtr + 1).append("] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.intPtr; i++) {
-		s = s + this.intStack[i] + ","; //$NON-NLS-1$
+		s.append(this.intStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
-	s = s + "intPtr : int = " + String.valueOf(this.intPtr) + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("}\n"); //$NON-NLS-1$
+	s.append("intPtr : int = ").append(String.valueOf(this.intPtr)).append("\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
-	s = s + "expressionLengthStack : int["+(this.expressionLengthPtr + 1)+"] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("expressionLengthStack : int[").append(this.expressionLengthPtr + 1).append("] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.expressionLengthPtr; i++) {
-		s = s + this.expressionLengthStack[i] + ","; //$NON-NLS-1$
+		s.append(this.expressionLengthStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
+	s.append("}\n"); //$NON-NLS-1$
 
-	s = s + "expressionPtr : int = " + String.valueOf(this.expressionPtr) + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("expressionPtr : int = ").append(String.valueOf(this.expressionPtr)).append("\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
-	s = s + "genericsIdentifiersLengthStack : int["+(this.genericsIdentifiersLengthPtr + 1)+"] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("genericsIdentifiersLengthStack : int[").append(this.genericsIdentifiersLengthPtr + 1).append("] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.genericsIdentifiersLengthPtr; i++) {
-		s = s + this.genericsIdentifiersLengthStack[i] + ","; //$NON-NLS-1$
+		s.append(this.genericsIdentifiersLengthStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
+	s.append("}\n"); //$NON-NLS-1$
 
-	s = s + "genericsLengthStack : int["+(this.genericsLengthPtr + 1)+"] = {"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("genericsLengthStack : int[").append(this.genericsLengthPtr + 1).append("] = {"); //$NON-NLS-1$ //$NON-NLS-2$
 	for (int i = 0; i <= this.genericsLengthPtr; i++) {
-		s = s + this.genericsLengthStack[i] + ","; //$NON-NLS-1$
+		s.append(this.genericsLengthStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
+	s.append("}\n"); //$NON-NLS-1$
 
-	s = s + "genericsPtr : int = " + String.valueOf(this.genericsPtr) + "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+	s.append("genericsPtr : int = ").append(String.valueOf(this.genericsPtr)).append("\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
-	s = s + "\n\n\n----------------Scanner--------------\n" + this.scanner.toString(); //$NON-NLS-1$
-	return s;
+	s.append("\n\n\n----------------Scanner--------------\n").append(this.scanner.toString()); //$NON-NLS-1$
+	return s.toString();
 
 }
 /*

@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.builder;
 
+import java.util.Arrays;
+
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.wst.jsdt.core.compiler.CharOperation;
@@ -45,6 +47,11 @@ public boolean equals(Object o) {
 	return sourceFolder.equals(md.sourceFolder) && binaryFolder.equals(md.binaryFolder)
 		&& CharOperation.equals(inclusionPatterns, md.inclusionPatterns)
 		&& CharOperation.equals(exclusionPatterns, md.exclusionPatterns);
+}
+
+@Override
+public int hashCode() {
+	return this.sourceFolder.hashCode() ^ Arrays.deepHashCode(this.inclusionPatterns) ^ Arrays.deepHashCode(exclusionPatterns);
 }
 
 protected boolean isExcluded(IResource resource) {

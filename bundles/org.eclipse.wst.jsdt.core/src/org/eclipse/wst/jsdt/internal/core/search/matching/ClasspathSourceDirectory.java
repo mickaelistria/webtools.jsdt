@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.search.matching;
 
@@ -78,6 +79,11 @@ public boolean equals(Object o) {
 	if (!(o instanceof ClasspathSourceDirectory)) return false;
 
 	return sourceFolder.equals(((ClasspathSourceDirectory) o).sourceFolder);
+}
+
+@Override
+public int hashCode() {
+	return sourceFolder.hashCode();
 }
 
 public NameEnvironmentAnswer findClass(String sourceFileWithoutExtension, String qualifiedPackageName, String qualifiedSourceFileWithoutExtension) {

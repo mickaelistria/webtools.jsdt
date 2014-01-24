@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *   Robert M. Fuhrer (rfuhrer@watson.ibm.com), IBM Corporation - initial API and implementation
+ *   Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets;
 
@@ -55,6 +56,11 @@ public class SubTypesSet extends TypeSet {
 //			return enumerate().equals(other.enumerate());
 		} else
 			return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.fUpperBounds.hashCode();
 	}
 
 	/* (non-Javadoc)
@@ -144,10 +150,10 @@ public class SubTypesSet extends TypeSet {
 
 		// Find the "upper frontier", i.e. the upper bound, and see whether
 		// the given type is a subtype of any of those.
-		Iterator ubIter= fUpperBounds.upperBound().iterator();
+		Iterator<TType> ubIter= fUpperBounds.upperBound().iterator();
 
 		for(; ubIter.hasNext(); ) {
-			TType ub= (TType) ubIter.next();
+			TType ub= ubIter.next();
 
 			if (TTypes.canAssignTo(t, ub))
 				return true;
@@ -165,14 +171,14 @@ public class SubTypesSet extends TypeSet {
 			return true;
 
 		// Make sure all elements of s are contained in this set
-		for(Iterator sIter= s.iterator(); sIter.hasNext(); ) {
-			TType t= (TType) sIter.next();
+		for(Iterator<TType> sIter= s.iterator(); sIter.hasNext(); ) {
+			TType t= sIter.next();
 			boolean found= false;
 
 			// Scan the "upper frontier", i.e. the upper bound set, and see whether
 			// 't' is a subtype of any of those.
-			for(Iterator ubIter= fUpperBounds /*.upperBound() */.iterator(); ubIter.hasNext(); ) {
-				TType ub= (TType) ubIter.next();
+			for(Iterator<TType> ubIter= fUpperBounds /*.upperBound() */.iterator(); ubIter.hasNext(); ) {
+				TType ub= ubIter.next();
 
 				if (TTypes.canAssignTo(t, ub)) {
 					found= true;
@@ -278,14 +284,14 @@ public class SubTypesSet extends TypeSet {
 		if (fEnumCache == null) {
 			fEnumCache= new EnumeratedTypeSet(getTypeSetEnvironment());
 
-			for(Iterator iter= fUpperBounds.iterator(); iter.hasNext(); ) {
-				TType ub= (TType) iter.next();
+			for(Iterator<TType> iter= fUpperBounds.iterator(); iter.hasNext(); ) {
+				TType ub= iter.next();
 
 				if (ub instanceof ArrayType) {
 					ArrayType at= (ArrayType) ub;
 					int numDims= at.getDimensions();
-					for(Iterator elemSubIter=TTypes.getAllSubTypesIterator(at.getElementType()); elemSubIter.hasNext(); )
-						fEnumCache.add(TTypes.createArrayType((TType) elemSubIter.next(), numDims));
+					for(Iterator <TType>elemSubIter=TTypes.getAllSubTypesIterator(at.getElementType()); elemSubIter.hasNext(); )
+						fEnumCache.add(TTypes.createArrayType(elemSubIter.next(), numDims));
 				} else {
 					for (Iterator iterator= TTypes.getAllSubTypesIterator(ub); iterator.hasNext();) {
 						fEnumCache.fMembers.add(iterator.next());

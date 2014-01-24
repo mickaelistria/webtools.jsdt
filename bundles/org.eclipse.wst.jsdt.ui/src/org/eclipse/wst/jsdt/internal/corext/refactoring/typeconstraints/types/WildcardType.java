@@ -43,7 +43,7 @@ public abstract class WildcardType extends TType {
 	
 	public int hashCode() {
 		if (fBound == null)
-			return super.hashCode();
+			return getClass().getName().hashCode();
 		return fBound.hashCode() << WILDCARD_TYPE_SHIFT;
 	}
 	

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,13 +7,13 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.text.java;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -92,6 +92,11 @@ public class JavaCompletionProposalComputer implements IJavaCompletionProposalCo
 			else
 				return fContextInformation.equals(object);
 		}
+		
+		@Override
+		public int hashCode() {
+			return this.fContextInformation.hashCode();
+		}
 	}
 	
 	private String fErrorMessage;
@@ -103,12 +108,11 @@ public class JavaCompletionProposalComputer implements IJavaCompletionProposalCo
 		return context.getInvocationOffset();
 	}
 
-	private List addContextInformations(JavaContentAssistInvocationContext context, int offset, IProgressMonitor monitor) {
-		List proposals= internalComputeCompletionProposals(offset, context, monitor);
-		List result= new ArrayList(proposals.size());
+	private List<ContextInformationWrapper> addContextInformations(JavaContentAssistInvocationContext context, int offset, IProgressMonitor monitor) {
+		List<ICompletionProposal> proposals= internalComputeCompletionProposals(offset, context, monitor);
+		List<ContextInformationWrapper> result= new ArrayList<ContextInformationWrapper>(proposals.size());
 
-		for (Iterator it= proposals.iterator(); it.hasNext();) {
-			ICompletionProposal proposal= (ICompletionProposal) it.next();
+		for (ICompletionProposal proposal : proposals) {
 			IContextInformation contextInformation= proposal.getContextInformation();
 			if (contextInformation != null) {
 				ContextInformationWrapper wrapper= new ContextInformationWrapper(contextInformation);
@@ -127,7 +131,7 @@ public class JavaCompletionProposalComputer implements IJavaCompletionProposalCo
 			JavaContentAssistInvocationContext javaContext= (JavaContentAssistInvocationContext) context;
 			
 			int contextInformationPosition= guessContextInformationPosition(javaContext);
-			List result= addContextInformations(javaContext, contextInformationPosition, monitor);
+			List<ContextInformationWrapper> result= addContextInformations(javaContext, contextInformationPosition, monitor);
 			return result;
 		}
 		return Collections.EMPTY_LIST;
@@ -144,7 +148,7 @@ public class JavaCompletionProposalComputer implements IJavaCompletionProposalCo
 		return Collections.EMPTY_LIST;
 	}
 
-	private List internalComputeCompletionProposals(int offset, JavaContentAssistInvocationContext context, IProgressMonitor monitor) {
+	private List<ICompletionProposal> internalComputeCompletionProposals(int offset, JavaContentAssistInvocationContext context, IProgressMonitor monitor) {
 		IJavaScriptUnit unit= context.getCompilationUnit();
 		if (unit == null)
 			return Collections.EMPTY_LIST;
@@ -193,7 +197,7 @@ public class JavaCompletionProposalComputer implements IJavaCompletionProposalCo
 			}
 		}
 		
-		List proposals= new ArrayList(Arrays.asList(javaProposals));
+		List<ICompletionProposal> proposals= new ArrayList<ICompletionProposal>(Arrays.asList(javaProposals));
 		if (proposals.size() == 0) {
 			String error= collector.getErrorMessage();
 			if (error.length() > 0)

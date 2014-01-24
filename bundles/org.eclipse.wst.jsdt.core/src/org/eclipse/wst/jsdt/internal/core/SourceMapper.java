@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2012 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -20,6 +21,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -84,7 +86,7 @@ public class SourceMapper
 	 * the zip (empty specifies the default root). <code>null</code> is
 	 * not a valid root path.
 	 */
-	protected ArrayList rootPaths;
+	protected ArrayList/*<String>*/ rootPaths;
 
 	/**
 	 * The binary type source is being mapped for
@@ -106,7 +108,7 @@ public class SourceMapper
 	 * Table that maps a binary method to its parameter names.
 	 * Keys are the method handles, entries are <code>char[][]</code>.
 	 */
-	protected HashMap parameterNames;
+	protected HashMap/*<IFunction, char[][]>*/ parameterNames;
 
 	/**
 	 * Table that maps a binary element to its <code>SourceRange</code>s.
@@ -114,12 +116,12 @@ public class SourceMapper
 	 * is a two element array; the first being source range, the second
 	 * being name range.
 	 */
-	protected HashMap sourceRanges;
+	protected HashMap/*<IJavaScriptElement, ISourceRange>*/ sourceRanges;
 
 	/*
 	 * A map from IJavaScriptElement to String[]
 	 */
-	protected HashMap categories;
+	protected HashMap/*<IJavaScriptElement, char[][]>*/ categories;
 
 
 	/**
@@ -160,8 +162,8 @@ public class SourceMapper
 	/**
 	 * imports references
 	 */
-	private HashMap importsTable;
-	private HashMap importsCounterTable;
+	private HashMap<BinaryType, char[][]> importsTable;
+	private HashMap<BinaryType, Integer> importsCounterTable;
 
 	/**
 	 * Enclosing type information
@@ -206,14 +208,14 @@ public class SourceMapper
 			// use no encoding
 		}
 		if (rootPath != null) {
-			this.rootPaths = new ArrayList();
+			this.rootPaths = new ArrayList<String>();
 			this.rootPaths.add(rootPath);
 		}
 		this.sourcePath = sourcePath;
 		this.sourceRanges = new HashMap();
 		this.parameterNames = new HashMap();
-		this.importsTable = new HashMap();
-		this.importsCounterTable = new HashMap();
+		this.importsTable = new HashMap<BinaryType, char[][]>();
+		this.importsCounterTable = new HashMap<BinaryType, Integer>();
 	}
 
 	/**
@@ -224,13 +226,13 @@ public class SourceMapper
 			int declarationEnd,
 			char[][] tokens,
 			boolean onDemand) {
-		char[][] imports = (char[][]) this.importsTable.get(this.binaryType);
+		char[][] imports = this.importsTable.get(this.binaryType);
 		int importsCounter;
 		if (imports == null) {
 			imports = new char[5][];
 			importsCounter = 0;
 		} else {
-			importsCounter = ((Integer) this.importsCounterTable.get(this.binaryType)).intValue();
+			importsCounter = this.importsCounterTable.get(this.binaryType).intValue();
 		}
 		if (imports.length == importsCounter) {
 			System.arraycopy(
@@ -249,7 +251,7 @@ public class SourceMapper
 		}
 		imports[importsCounter++] = name;
 		this.importsTable.put(this.binaryType, imports);
-		this.importsCounterTable.put(this.binaryType, new Integer(importsCounter));
+		this.importsCounterTable.put(this.binaryType, Integer.valueOf(importsCounter));
 	}
 
 	/**
@@ -279,7 +281,7 @@ public class SourceMapper
 	private void addCategories(IJavaScriptElement element, char[][] elementCategories) {
 		if (elementCategories == null) return;
 		if (this.categories == null)
-			this.categories = new HashMap();
+			this.categories = new HashMap<IJavaScriptElement, char[][]>();
 		this.categories.put(element, CharOperation.toStrings(elementCategories));
 	}
 
@@ -350,13 +352,13 @@ public class SourceMapper
 			return;
 		}
 		IPackageFragmentRoot root = (IPackageFragmentRoot) type.getPackageFragment().getParent();
-		final HashSet tempRoots = new HashSet();
+		final HashSet<IPath> tempRoots = new HashSet<IPath>();
 		long time = 0;
 		if (VERBOSE) {
 			System.out.println("compute all root paths for " + root.getElementName()); //$NON-NLS-1$
 			time = System.currentTimeMillis();
 		}
-		final HashSet firstLevelPackageNames = new HashSet();
+		final HashSet<String> firstLevelPackageNames = new HashSet<String>();
 		boolean containsADefaultPackage = false;
 
 //		if (root.isArchive()) {
@@ -436,8 +438,8 @@ public class SourceMapper
 			ZipFile zip = null;
 			try {
 				zip = manager.getZipFile(this.sourcePath);
-				for (Enumeration entries = zip.entries(); entries.hasMoreElements(); ) {
-					ZipEntry entry = (ZipEntry) entries.nextElement();
+				for (Enumeration<? extends ZipEntry> entries = zip.entries(); entries.hasMoreElements(); ) {
+					ZipEntry entry = entries.nextElement();
 					String entryName;
 					if (!entry.isDirectory() && org.eclipse.wst.jsdt.internal.core.util.Util.isJavaLikeFileName(entryName = entry.getName())) {
 						IPath path = new Path(entryName);
@@ -477,27 +479,24 @@ public class SourceMapper
 		}
 		int size = tempRoots.size();
 		if (this.rootPaths != null) {
-			for (Iterator iterator = this.rootPaths.iterator(); iterator.hasNext(); ) {
-				tempRoots.add(new Path((String) iterator.next()));
+			for (String currentRootPath : (List<String>)this.rootPaths) {
+				tempRoots.add(new Path(currentRootPath));
 			}
 			this.rootPaths.clear();
 		} else {
-			this.rootPaths = new ArrayList(size);
+			this.rootPaths = new ArrayList<String>(size);
 		}
 		size = tempRoots.size();
 		if (size > 0) {
-			ArrayList sortedRoots = new ArrayList(tempRoots);
+			ArrayList<IPath> sortedRoots = new ArrayList<IPath>(tempRoots);
 			if (size > 1) {
-				Collections.sort(sortedRoots, new Comparator() {
-					public int compare(Object o1, Object o2) {
-						IPath path1 = (IPath) o1;
-						IPath path2 = (IPath) o2;
+				Collections.sort(sortedRoots, new Comparator<IPath>() {
+					public int compare(IPath path1, IPath path2) {
 						return path1.segmentCount() - path2.segmentCount();
 					}
 				});
 			}
-			for (Iterator iter = sortedRoots.iterator(); iter.hasNext();) {
-				IPath path = (IPath) iter.next();
+			for (IPath path : sortedRoots) {
 				this.rootPaths.add(path.toString());
 			}
 		}
@@ -506,14 +505,14 @@ public class SourceMapper
 			System.out.println("Spent " + (System.currentTimeMillis() - time) + "ms"); //$NON-NLS-1$ //$NON-NLS-2$
 			System.out.println("Found " + size + " root paths");	//$NON-NLS-1$ //$NON-NLS-2$
 			int i = 0;
-			for (Iterator iterator = this.rootPaths.iterator(); iterator.hasNext();) {
-				System.out.println("root[" + i + "]=" + ((String) iterator.next()));//$NON-NLS-1$ //$NON-NLS-2$
+			for (String currentRootPath : (List<String>)this.rootPaths) {
+				System.out.println("root[" + i + "]=" + currentRootPath);//$NON-NLS-1$ //$NON-NLS-2$
 				i++;
 			}
 		}
 	}
 
-	private void computeRootPath(File directory, HashSet firstLevelPackageNames, boolean hasDefaultPackage, Set set) {
+	private void computeRootPath(File directory, HashSet<String> firstLevelPackageNames, boolean hasDefaultPackage, Set<IPath> set) {
 		File[] files = directory.listFiles();
 		boolean hasSubDirectories = false;
 		loop: for (int i = 0, max = files.length; i < max; i++) {
@@ -539,7 +538,7 @@ public class SourceMapper
 		}
 	}
 
-	private void computeRootPath(IContainer container, HashSet firstLevelPackageNames, boolean hasDefaultPackage, Set set) {
+	private void computeRootPath(IContainer container, HashSet<String> firstLevelPackageNames, boolean hasDefaultPackage, Set<IPath> set) {
 		try {
 			IResource[] resources = container.members();
 			boolean hasSubDirectories = false;
@@ -869,8 +868,8 @@ public class SourceMapper
 		if (source == null) {
 			computeAllRootPaths(type);
 			if (this.rootPaths != null) {
-				loop: for (Iterator iterator = this.rootPaths.iterator(); iterator.hasNext(); ) {
-					String currentRootPath = (String) iterator.next();
+				loop: for (Iterator<String> iterator = ((List<String>)this.rootPaths).iterator(); iterator.hasNext(); ) {
+					String currentRootPath = iterator.next();
 					if (!currentRootPath.equals(this.rootPath)) {
 						source = getSourceForRootPath(currentRootPath, name);
 						if (source != null) {
@@ -1171,7 +1170,7 @@ public class SourceMapper
 		this.methodParameterNames = new char[1][][];
 		this.anonymousCounter = 0;
 
-		HashMap oldSourceRanges = (HashMap) this.sourceRanges.clone();
+		HashMap<IJavaScriptElement, ISourceRange> oldSourceRanges = (HashMap<IJavaScriptElement, ISourceRange>) this.sourceRanges.clone();
 		try {
 			IProblemFactory factory = new DefaultProblemFactory();
 			SourceElementParser parser = null;
@@ -1263,9 +1262,9 @@ public class SourceMapper
 	 * Return a char[][] array containing the imports of the attached source for the binary type
 	 */
 	public char[][] getImports(BinaryType type) {
-		char[][] imports = (char[][]) this.importsTable.get(type);
+		char[][] imports = this.importsTable.get(type);
 		if (imports != null) {
-			int importsCounter = ((Integer) this.importsCounterTable.get(type)).intValue();
+			int importsCounter = this.importsCounterTable.get(type).intValue();
 			if (imports.length != importsCounter) {
 				System.arraycopy(
 					imports,

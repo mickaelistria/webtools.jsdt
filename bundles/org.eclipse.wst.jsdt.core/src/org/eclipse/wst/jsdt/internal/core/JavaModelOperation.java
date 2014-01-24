@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -128,7 +129,7 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	/*
 	 * A per thread stack of java model operations (PerThreadObject of ArrayList).
 	 */
-	protected static ThreadLocal operationStacks = new ThreadLocal();
+	protected static ThreadLocal/*<JavaModelOperation>*/ operationStacks = new ThreadLocal();
 	protected JavaModelOperation() {
 		// default constructor used in subclasses
 	}
@@ -195,7 +196,7 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Registers the given reconcile delta with the Java Model Manager.
 	 */
 	protected void addReconcileDelta(IJavaScriptUnit workingCopy, IJavaScriptElementDelta delta) {
-		HashMap reconcileDeltas = JavaModelManager.getJavaModelManager().getDeltaProcessor().reconcileDeltas;
+		HashMap<IJavaScriptUnit, IJavaScriptElementDelta> reconcileDeltas = JavaModelManager.getJavaModelManager().getDeltaProcessor().reconcileDeltas;
 		JavaElementDelta previousDelta = (JavaElementDelta)reconcileDeltas.get(workingCopy);
 		if (previousDelta != null) {
 			IJavaScriptElementDelta[] children = delta.getAffectedChildren();
@@ -420,9 +421,9 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Returns null if no such attribute is found.
 	 */
 	protected static Object getAttribute(Object key) {
-		ArrayList stack = getCurrentOperationStack();
+		ArrayList<JavaModelOperation> stack = getCurrentOperationStack();
 		if (stack.size() == 0) return null;
-		JavaModelOperation topLevelOp = (JavaModelOperation)stack.get(0);
+		JavaModelOperation topLevelOp = stack.get(0);
 		if (topLevelOp.attributes == null) {
 			return null;
 		} else {
@@ -442,10 +443,10 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Returns the stack of operations running in the current thread.
 	 * Returns an empty stack if no operations are currently running in this thread.
 	 */
-	protected static ArrayList getCurrentOperationStack() {
-		ArrayList stack = (ArrayList)operationStacks.get();
+	protected static ArrayList/*<JavaModelOperation>*/ getCurrentOperationStack() {
+		ArrayList<JavaModelOperation> stack = (ArrayList<JavaModelOperation>)operationStacks.get();
 		if (stack == null) {
-			stack = new ArrayList();
+			stack = new ArrayList<JavaModelOperation>();
 			operationStacks.set(stack);
 		}
 		return stack;
@@ -546,7 +547,7 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Returns false if this operation has not been executed yet.
 	 */
 	public boolean hasModifiedResource() {
-		return !this.isReadOnly() && getAttribute(HAS_MODIFIED_RESOURCE_ATTR) == TRUE;
+		return !this.isReadOnly() && TRUE.equals(getAttribute(HAS_MODIFIED_RESOURCE_ATTR));
 	}
 	public void internalWorked(double work) {
 		if (progressMonitor != null) {
@@ -573,7 +574,7 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Returns whether this operation is the first operation to run in the current thread.
 	 */
 	protected boolean isTopLevelOperation() {
-		ArrayList stack;
+		ArrayList<JavaModelOperation> stack;
 		return
 			(stack = getCurrentOperationStack()).size() > 0
 			&& stack.get(0) == this;
@@ -619,13 +620,13 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Returns the poped operation or null if the stack was empty.
 	 */
 	protected JavaModelOperation popOperation() {
-		ArrayList stack = getCurrentOperationStack();
+		ArrayList<JavaModelOperation> stack = getCurrentOperationStack();
 		int size = stack.size();
 		if (size > 0) {
 			if (size == 1) { // top level operation
 				operationStacks.set(null); // release reference (see http://bugs.eclipse.org/bugs/show_bug.cgi?id=33927)
 			}
-			return (JavaModelOperation)stack.remove(size-1);
+			return stack.remove(size-1);
 		} else {
 			return null;
 		}
@@ -833,12 +834,12 @@ public abstract class JavaModelOperation implements IWorkspaceRunnable, IProgres
 	 * Registers the given attribute at the given key with the top level operation.
 	 */
 	protected static void setAttribute(Object key, Object attribute) {
-		ArrayList operationStack = getCurrentOperationStack();
+		ArrayList<JavaModelOperation> operationStack = getCurrentOperationStack();
 		if (operationStack.size() == 0)
 			return;
-		JavaModelOperation topLevelOp = (JavaModelOperation) operationStack.get(0);
+		JavaModelOperation topLevelOp = operationStack.get(0);
 		if (topLevelOp.attributes == null) {
-			topLevelOp.attributes = new HashMap();
+			topLevelOp.attributes = new HashMap<Object, Object>();
 		}
 		topLevelOp.attributes.put(key, attribute);
 	}

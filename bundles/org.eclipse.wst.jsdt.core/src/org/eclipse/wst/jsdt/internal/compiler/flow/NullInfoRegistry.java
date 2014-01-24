@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2007 IBM Corporation and others.
+ * Copyright (c) 2006, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.flow;
 
@@ -357,20 +358,25 @@ public String toString(){
 			+ ">"; //$NON-NLS-1$
 	}
 	else {
-		String nullS = "NullInfoRegistry<[" + this.nullBit1 //$NON-NLS-1$
-			+ this.nullBit2 + this.nullBit3 + this.nullBit4;
-			int i, ceil;
-			for (i = 0, ceil = this.extra[0].length > 3 ?
-								3 :
-								this.extra[0].length;
+		StringBuilder nullS = new StringBuilder("NullInfoRegistry<["); //$NON-NLS-1$
+		nullS.append(this.nullBit1);
+		nullS.append(this.nullBit2);
+		nullS.append(this.nullBit3);
+		nullS.append(this.nullBit4);
+		int i, ceil;
+		for (i = 0, ceil = this.extra[0].length > 3 ? 3 : this.extra[0].length;
 				i < ceil; i++) {
-				nullS += "," + this.extra[2][i] //$NON-NLS-1$
-				    + this.extra[3][i] + this.extra[4][i] + this.extra[5][i];
-			}
-			if (ceil < this.extra[0].length) {
-				nullS += ",..."; //$NON-NLS-1$
-			}
-			return nullS + "]>"; //$NON-NLS-1$
+			nullS.append(","); //$NON-NLS-1$
+			nullS.append(this.extra[2][i]);
+			nullS.append(this.extra[3][i]);
+			nullS.append(this.extra[4][i]);
+			nullS.append(this.extra[5][i]);
+		}
+		if (ceil < this.extra[0].length) {
+			nullS.append(",..."); //$NON-NLS-1$
+		}
+		nullS.append("]>"); //$NON-NLS-1$
+		return nullS.toString();
 	}
 }
 }

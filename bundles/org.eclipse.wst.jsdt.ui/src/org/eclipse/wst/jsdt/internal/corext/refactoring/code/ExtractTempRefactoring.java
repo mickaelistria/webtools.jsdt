@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
 
@@ -123,11 +124,11 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 
 	private static final class ForStatementChecker extends ASTVisitor {
 
-		private final Collection fForInitializerVariables;
+		private final Collection<? extends IBinding> fForInitializerVariables;
 
 		private boolean fReferringToForVariable= false;
 
-		public ForStatementChecker(Collection forInitializerVariables) {
+		public ForStatementChecker(Collection<? extends IBinding> forInitializerVariables) {
 			Assert.isNotNull(forInitializerVariables);
 			fForInitializerVariables= forInitializerVariables;
 		}
@@ -182,21 +183,17 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 		return true;
 	}
 
-	private static Object[] getArrayPrefix(Object[] array, int prefixLength) {
+	private static <T> T[] getArrayPrefix(T[] array, int prefixLength) {
 		Assert.isTrue(prefixLength <= array.length);
 		Assert.isTrue(prefixLength >= 0);
-		Object[] prefix= new Object[prefixLength];
-		for (int i= 0; i < prefix.length; i++) {
-			prefix[i]= array[i];
-		}
-		return prefix;
+		return Arrays.copyOf(array, prefixLength);
 	}
 
 	// return List<IVariableBinding>
-	private static List getForInitializedVariables(VariableDeclarationExpression variableDeclarations) {
-		List forInitializerVariables= new ArrayList(1);
-		for (Iterator iter= variableDeclarations.fragments().iterator(); iter.hasNext();) {
-			VariableDeclarationFragment fragment= (VariableDeclarationFragment) iter.next();
+	private static List<IVariableBinding> getForInitializedVariables(VariableDeclarationExpression variableDeclarations) {
+		List<IVariableBinding> forInitializerVariables= new ArrayList<IVariableBinding>(1);
+		for (Iterator<VariableDeclarationFragment> iter= variableDeclarations.fragments().iterator(); iter.hasNext();) {
+			VariableDeclarationFragment fragment= iter.next();
 			IVariableBinding binding= fragment.resolveBinding();
 			if (binding != null)
 				forInitializerVariables.add(binding);
@@ -204,10 +201,10 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 		return forInitializerVariables;
 	}
 
-	private static Object[] getLongestArrayPrefix(Object[][] arrays) {
+	private static <T> T[] getLongestArrayPrefix(T[][] arrays) {
 		int length= -1;
 		if (arrays.length == 0)
-			return new Object[0];
+			return (T[])new Object[0];
 		int minArrayLength= arrays[0].length;
 		for (int i= 1; i < arrays.length; i++)
 			minArrayLength= Math.min(minArrayLength, arrays[i].length);
@@ -218,19 +215,19 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 			length++;
 		}
 		if (length == -1)
-			return new Object[0];
+			return (T[])new Object[0];
 		return getArrayPrefix(arrays[0], length + 1);
 	}
 
 	private static ASTNode[] getParents(ASTNode node) {
 		ASTNode current= node;
-		List parents= new ArrayList();
+		List<ASTNode> parents= new ArrayList<ASTNode>();
 		do {
 			parents.add(current.getParent());
 			current= current.getParent();
 		} while (current.getParent() != null);
 		Collections.reverse(parents);
-		return (ASTNode[]) parents.toArray(new ASTNode[parents.size()]);
+		return parents.toArray(new ASTNode[parents.size()]);
 	}
 
 	private static boolean isLeftValue(ASTNode node) {
@@ -266,7 +263,7 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 				if (forStmt.initializers().contains(current) || forStmt.updaters().contains(current) || forStmt.getExpression() == current) {
 					List initializers= forStmt.initializers();
 					if (initializers.size() == 1 && initializers.get(0) instanceof VariableDeclarationExpression) {
-						List forInitializerVariables= getForInitializedVariables((VariableDeclarationExpression) initializers.get(0));
+						List<IVariableBinding> forInitializerVariables= getForInitializedVariables((VariableDeclarationExpression) initializers.get(0));
 						ForStatementChecker checker= new ForStatementChecker(forInitializerVariables);
 						expression.accept(checker);
 						if (checker.isReferringToForVariable())
@@ -278,7 +275,7 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 				ForInStatement forInStmt= (ForInStatement) parent;
 				if (forInStmt.getIterationVariable().equals(current)  || forInStmt.getCollection() == current) {
 					if (forInStmt.getIterationVariable() instanceof VariableDeclarationStatement) {
-						List forInitializerVariables= new ArrayList(1);
+						List<IVariableBinding> forInitializerVariables= new ArrayList<IVariableBinding>(1);
 						forInitializerVariables.add(  ((VariableDeclarationStatement) forInStmt.getIterationVariable()).resolveBinding());
 						ForStatementChecker checker= new ForStatementChecker(forInitializerVariables);
 						expression.accept(checker);
@@ -307,12 +304,12 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 	}
 
 	private static IASTFragment[] retainOnlyReplacableMatches(IASTFragment[] allMatches) {
-		List result= new ArrayList(allMatches.length);
-		for (int i= 0; i < allMatches.length; i++) {
-			if (canReplace(allMatches[i]))
-				result.add(allMatches[i]);
+		List<IASTFragment> result= new ArrayList<IASTFragment>(allMatches.length);
+		for (IASTFragment match : allMatches) {
+			if (canReplace(match))
+				result.add(match);
 		}
-		return (IASTFragment[]) result.toArray(new IASTFragment[result.size()]);
+		return result.toArray(new IASTFragment[result.size()]);
 	}
 
 	private JavaScriptUnit fCompilationUnitNode;
@@ -391,7 +388,7 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 		IASTFragment[] fragmentsToReplace= retainOnlyReplacableMatches(getMatchingFragments());
 		//TODO: should not have to prune duplicates here...
 		ASTRewrite rewrite= fCURewrite.getASTRewrite();
-		HashSet seen= new HashSet();
+		HashSet<IASTFragment> seen= new HashSet<IASTFragment>();
 		for (int i= 0; i < fragmentsToReplace.length; i++) {
 			IASTFragment fragment= fragmentsToReplace[i];
 			if (! seen.add(fragment))
@@ -477,7 +474,7 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 	}
 	
 	private final JDTRefactoringDescriptor createRefactoringDescriptor() {
-		final Map arguments= new HashMap();
+		final Map<String, String> arguments= new HashMap<String, String>();
 		String project= null;
 		IJavaScriptProject javaProject= fCu.getJavaScriptProject();
 		if (javaProject != null)
@@ -501,7 +498,7 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 		final JDTRefactoringDescriptor descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.EXTRACT_LOCAL_VARIABLE, project, description, comment.asString(), arguments, RefactoringDescriptor.NONE);
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fCu));
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_NAME, fTempName);
-		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
+		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
 		arguments.put(ATTRIBUTE_REPLACE, Boolean.valueOf(fReplaceAllOccurrences).toString());
 		arguments.put(ATTRIBUTE_FINAL, Boolean.valueOf(fDeclareFinal).toString());
 		return descriptor;
@@ -733,8 +730,8 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 		for (int i= 0; i < matchNodes.length; i++) {
 			matchingNodesParents[i]= getParents(matchNodes[i]);
 		}
-		List l= Arrays.asList(getLongestArrayPrefix(matchingNodesParents));
-		return (ASTNode[]) l.toArray(new ASTNode[l.size()]);
+		List<ASTNode> l= Arrays.asList(getLongestArrayPrefix(matchingNodesParents));
+		return l.toArray(new ASTNode[l.size()]);
 	}
 
 	private Block getEnclosingBodyNode() throws JavaScriptModelException {
@@ -772,10 +769,10 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 		IASTFragment[] nodesToReplace= retainOnlyReplacableMatches(getMatchingFragments());
 		if (nodesToReplace.length == 0)
 			return getSelectedExpression();
-		Comparator comparator= new Comparator() {
+		Comparator<IASTFragment> comparator= new Comparator<IASTFragment>() {
 
-			public int compare(Object o1, Object o2) {
-				return ((IASTFragment) o1).getStartPosition() - ((IASTFragment) o2).getStartPosition();
+			public int compare(IASTFragment o1, IASTFragment o2) {
+				return o1.getStartPosition() - o2.getStartPosition();
 			}
 		};
 		Arrays.sort(nodesToReplace, comparator);
@@ -966,9 +963,9 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 				int length= -1;
 				final StringTokenizer tokenizer= new StringTokenizer(selection);
 				if (tokenizer.hasMoreTokens())
-					offset= Integer.valueOf(tokenizer.nextToken()).intValue();
+					offset= Integer.parseInt(tokenizer.nextToken());
 				if (tokenizer.hasMoreTokens())
-					length= Integer.valueOf(tokenizer.nextToken()).intValue();
+					length= Integer.parseInt(tokenizer.nextToken());
 				if (offset >= 0 && length >= 0) {
 					fSelectionStart= offset;
 					fSelectionLength= length;
@@ -992,12 +989,12 @@ public class ExtractTempRefactoring extends ScriptableRefactoring {
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JDTRefactoringDescriptor.ATTRIBUTE_NAME));
 			final String replace= extended.getAttribute(ATTRIBUTE_REPLACE);
 			if (replace != null) {
-				fReplaceAllOccurrences= Boolean.valueOf(replace).booleanValue();
+				fReplaceAllOccurrences= Boolean.parseBoolean(replace);
 			} else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_REPLACE));
 			final String declareFinal= extended.getAttribute(ATTRIBUTE_FINAL);
 			if (declareFinal != null) {
-				fDeclareFinal= Boolean.valueOf(declareFinal).booleanValue();
+				fDeclareFinal= Boolean.parseBoolean(declareFinal);
 			} else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_FINAL));
 		} else

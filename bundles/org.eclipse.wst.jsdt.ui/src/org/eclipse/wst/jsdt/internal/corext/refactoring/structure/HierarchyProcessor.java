@@ -217,7 +217,7 @@ public abstract class HierarchyProcessor extends SuperTypeRefactoringProcessor {
 		newFragment.setExtraDimensions(oldFieldFragment.getExtraDimensions());
 		if (oldFieldFragment.getInitializer() != null) {
 			Expression newInitializer= null;
-			if (mapping.length > 0)
+			if (mapping != null && mapping.length > 0)
 				newInitializer= createPlaceholderForExpression(oldFieldFragment.getInitializer(), field.getJavaScriptUnit(), mapping, rewrite);
 			else
 				newInitializer= createPlaceholderForExpression(oldFieldFragment.getInitializer(), field.getJavaScriptUnit(), rewrite);
@@ -535,7 +535,7 @@ public abstract class HierarchyProcessor extends SuperTypeRefactoringProcessor {
 		SingleVariableDeclaration newDeclaration= null;
 		for (int index= 0, size= oldMethod.parameters().size(); index < size; index++) {
 			final SingleVariableDeclaration oldDeclaration= (SingleVariableDeclaration) oldMethod.parameters().get(index);
-			if (mapping.length > 0)
+			if (mapping != null && mapping.length > 0)
 				newDeclaration= createPlaceholderForSingleVariableDeclaration(oldDeclaration, unit, mapping, rewrite);
 			else
 				newDeclaration= createPlaceholderForSingleVariableDeclaration(oldDeclaration, unit, rewrite);
@@ -545,7 +545,7 @@ public abstract class HierarchyProcessor extends SuperTypeRefactoringProcessor {
 
 	protected void copyReturnType(final ASTRewrite rewrite, final IJavaScriptUnit unit, final FunctionDeclaration oldMethod, final FunctionDeclaration newMethod, final TypeVariableMaplet[] mapping) throws JavaScriptModelException {
 		Type newReturnType= null;
-		if (mapping.length > 0)
+		if (mapping != null && mapping.length > 0)
 			newReturnType= createPlaceholderForType(oldMethod.getReturnType2(), unit, mapping, rewrite);
 		else
 			newReturnType= createPlaceholderForType(oldMethod.getReturnType2(), unit, rewrite);

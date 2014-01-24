@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2010 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.search.indexing;
 
@@ -127,7 +128,7 @@ public class IndexAllProject extends IndexRequest {
 				if (sourceFolder != null) {
 
 					// collect output locations if source is project (see http://bugs.eclipse.org/bugs/show_bug.cgi?id=32041)
-					final HashSet outputs = new HashSet();
+					final HashSet<IPath> outputs = new HashSet<IPath>();
 					if (sourceFolder.getType() == IResource.PROJECT) {
 						// Do not create marker while getting output location (see bug 41859)
 						outputs.add(javaProject.getOutputLocation());
@@ -216,8 +217,8 @@ public class IndexAllProject extends IndexRequest {
 					if (this.isCancelled) return false;
 
 					Object value = values[i];
-					if (value != OK) {
-						if (value == DELETED)
+					if (! OK.equals(value)) {
+						if (DELETED.equals(value))
 							this.manager.remove(name, this.containerPath);
 						else
 							this.manager.addSource((IFile) value, this.containerPath, parser);

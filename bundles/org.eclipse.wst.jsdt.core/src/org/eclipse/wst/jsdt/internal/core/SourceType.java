@@ -463,7 +463,7 @@ public class SourceType extends NamedMember implements IType {
 		if(superclassName == null) {
 			return null;
 		}
-		return new String(Signature.createTypeSignature(superclassName, false));
+		return Signature.createTypeSignature(superclassName, false);
 	}
 
 	/**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.core.tests.util;
 
@@ -950,8 +951,8 @@ public static boolean isResourceDeleted(IResource resource) {
  * 	If negative then display children information instead.
  */
 private static void printFileInfo(File file, int indent, int recurse) {
-	String tab = "";
-	for (int i=0; i<indent; i++) tab+="\t";
+	StringBuilder tab = new StringBuilder();
+	for (int i=0; i<indent; i++) tab.append("\t"); //$NON-NLS-1$
 	System.out.print(tab+"- "+file.getName()+" file info: ");
 	String sep = "";
 	if (file.canRead()) {
@@ -1010,8 +1011,8 @@ private static void printFileInfo(File file, int indent, int recurse) {
  * @param indent Number of tab to display before the stack elements to display.
  */
 private static void printJdtCoreStackTrace(Exception exception, int indent) {
-	String tab = "";
-	for (int i=0; i<indent; i++) tab+="\t";
+	StringBuilder tab = new StringBuilder();
+	for (int i=0; i<indent; i++) tab.append("\t"); //$NON-NLS-1$
 	StackTraceElement[] elements = (exception==null?new Exception():exception).getStackTrace();
 	int idx = 0, length=elements.length;
 	while (idx<length && !elements[idx++].getClassName().startsWith("org.eclipse.wst.jsdt")) {

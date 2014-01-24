@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *   Robert M. Fuhrer (rfuhrer@watson.ibm.com), IBM Corporation - initial API and implementation
+ *   Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets;
 
@@ -120,8 +121,8 @@ public class SingletonTypeSet extends TypeSet {
 	/* (non-Javadoc)
 	 * @see org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets.TypeSet#iterator()
 	 */
-	public Iterator iterator() {
-		return new Iterator() {
+	public Iterator/*<TType>*/ iterator() {
+		return new Iterator<TType>() {
 			private boolean done= false;
 			public void remove() {
 				throw new UnsupportedOperationException();
@@ -129,7 +130,7 @@ public class SingletonTypeSet extends TypeSet {
 			public boolean hasNext() {
 				return !done;
 			}
-			public Object next() {
+			public TType next() {
 				done= true;
 				return fType;
 			}
@@ -170,6 +171,11 @@ public class SingletonTypeSet extends TypeSet {
 			return other.isSingleton() && other.anyMember().equals(fType);
 		} else
 			return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.fType.hashCode();
 	}
 
 	public String toString() {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.formatter;
 
@@ -63,13 +64,13 @@ import org.eclipse.wst.jsdt.internal.compiler.parser.TerminalTokens;
 class BinaryExpressionFragmentBuilder
 	extends ASTVisitor {
 
-	ArrayList fragmentsList;
-	ArrayList operatorsList;
+	ArrayList/*<ASTNode>*/ fragmentsList;
+	ArrayList/*<Integer>*/ operatorsList;
 	private int realFragmentsSize;
 
 	BinaryExpressionFragmentBuilder() {
-		this.fragmentsList = new ArrayList();
-		this.operatorsList = new ArrayList();
+		this.fragmentsList = new ArrayList<ASTNode>();
+		this.operatorsList = new ArrayList<Integer>();
 		this.realFragmentsSize = 0;
 	}
 
@@ -101,7 +102,7 @@ class BinaryExpressionFragmentBuilder
 		int length = operatorsList.size();
 		int[] tab = new int[length];
 		for (int i = 0; i < length; i++) {
-			tab[i] = ((Integer)operatorsList.get(i)).intValue();
+			tab[i] = ((ArrayList<Integer>)operatorsList).get(i).intValue();
 		}
 		return tab;
 	}
@@ -125,7 +126,7 @@ class BinaryExpressionFragmentBuilder
 			addRealFragment(and_and_Expression);
 		} else {
 			and_and_Expression.left.traverse(this, scope);
-			this.operatorsList.add(new Integer(TerminalTokens.TokenNameAND_AND));
+			this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameAND_AND));
 			and_and_Expression.right.traverse(this, scope);
 		}
 		return false;
@@ -196,56 +197,56 @@ class BinaryExpressionFragmentBuilder
 				case OperatorIds.PLUS :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNamePLUS));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNamePLUS));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.MINUS :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameMINUS));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameMINUS));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.MULTIPLY :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameMULTIPLY));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameMULTIPLY));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.REMAINDER :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameREMAINDER));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameREMAINDER));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.XOR :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameXOR));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameXOR));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.DIVIDE :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameDIVIDE));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameDIVIDE));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.OR :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameOR));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameOR));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
 				case OperatorIds.AND :
 					if (buildFragments(binaryExpression)) {
 						binaryExpression.left.traverse(this, scope);
-						this.operatorsList.add(new Integer(TerminalTokens.TokenNameAND));
+						this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameAND));
 						binaryExpression.right.traverse(this, scope);
 					}
 					return false;
@@ -260,7 +261,7 @@ class BinaryExpressionFragmentBuilder
 		// keep implementation in sync with BinaryExpression#resolveType
 		if (combinedBinaryExpression.referencesTable == null) {
 			this.addRealFragment(combinedBinaryExpression.left);
-			this.operatorsList.add(new Integer(TerminalTokens.TokenNamePLUS));
+			this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNamePLUS));
 			this.addRealFragment(combinedBinaryExpression.right);
 			return false;
 		}
@@ -271,10 +272,10 @@ class BinaryExpressionFragmentBuilder
 			this.addRealFragment(cursor.left);
 		}
 		for (int i = 0, end = combinedBinaryExpression.arity; i < end; i ++) {
-			this.operatorsList.add(new Integer(TerminalTokens.TokenNamePLUS));
+			this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNamePLUS));
 			this.addRealFragment(combinedBinaryExpression.referencesTable[i].right);
 		}
-		this.operatorsList.add(new Integer(TerminalTokens.TokenNamePLUS));
+		this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNamePLUS));
 		this.addRealFragment(combinedBinaryExpression.right);
 		return false;
 	}
@@ -375,7 +376,7 @@ class BinaryExpressionFragmentBuilder
 			for (int i = 0, max = stringLiteral.counter; i < max; i++) {
 				this.addRealFragment(stringLiteral.literals[i]);
 				if (i < max - 1) {
-					this.operatorsList.add(new Integer(TerminalTokens.TokenNamePLUS));
+					this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNamePLUS));
 				}
 			}
 			return false;
@@ -392,7 +393,7 @@ class BinaryExpressionFragmentBuilder
 			addRealFragment(or_or_Expression);
 		} else {
 			or_or_Expression.left.traverse(this, scope);
-			this.operatorsList.add(new Integer(TerminalTokens.TokenNameOR_OR));
+			this.operatorsList.add(Integer.valueOf(TerminalTokens.TokenNameOR_OR));
 			or_or_Expression.right.traverse(this, scope);
 		}
 		return false;

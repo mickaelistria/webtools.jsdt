@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *   Robert M. Fuhrer (rfuhrer@watson.ibm.com), IBM Corporation - initial API and implementation
+ *   Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets;
 
@@ -158,8 +159,8 @@ public class SuperTypesOfSingleton extends TypeSet {
 			SuperTypesSet otherSuper= (SuperTypesSet) other;
 			TypeSet otherLowerBounds= otherSuper.lowerBound();
 
-			for(Iterator iter= otherLowerBounds.iterator(); iter.hasNext(); ) {
-				TType t= (TType) iter.next();
+			for(Iterator<TType> iter= otherLowerBounds.iterator(); iter.hasNext(); ) {
+				TType t= iter.next();
 				if (! TTypes.canAssignTo(fLowerBound, t))
 					return false;
 			}
@@ -169,8 +170,8 @@ public class SuperTypesOfSingleton extends TypeSet {
 			return false;
 		}
 		// For now, no more tricks up my sleeve; get an iterator
-		for(Iterator iter= other.iterator(); iter.hasNext(); ) {
-			TType t= (TType) iter.next();
+		for(Iterator<TType> iter= other.iterator(); iter.hasNext(); ) {
+			TType t= iter.next();
 
 			if (! TTypes.canAssignTo(fLowerBound, t))
 				return false;
@@ -245,6 +246,11 @@ public class SuperTypesOfSingleton extends TypeSet {
 		SuperTypesOfSingleton other= (SuperTypesOfSingleton) o;
 
 		return other.fLowerBound.equals(fLowerBound);
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.fLowerBound.hashCode();
 	}
 
 	public String toString() {

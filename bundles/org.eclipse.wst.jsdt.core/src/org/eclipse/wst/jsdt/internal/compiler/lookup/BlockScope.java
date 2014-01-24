@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     David Thompson = bug 214171 -Class cast exception
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.lookup;
 
@@ -154,17 +155,26 @@ public final boolean allowBlankFinalFieldAssignment(FieldBinding binding) {
 			|| ((AbstractMethodDeclaration) methodScope.referenceContext).isInitializationMethod(); // inside constructor or clinit
 }
 String basicToString(int tab) {
-	String newLine = "\n"; //$NON-NLS-1$
-	for (int i = tab; --i >= 0;)
-		newLine += "\t"; //$NON-NLS-1$
+	StringBuilder newLine = new StringBuilder("\n"); //$NON-NLS-1$
+	for (int i = tab; --i >= 0;) {
+		newLine.append("\t"); //$NON-NLS-1$
+	}
 
-	String s = newLine + "--- Block Scope ---"; //$NON-NLS-1$
-	newLine += "\t"; //$NON-NLS-1$
-	s += newLine + "locals:"; //$NON-NLS-1$
-	for (int i = 0; i < this.localIndex; i++)
-		s += newLine + "\t" + this.locals[i].toString(); //$NON-NLS-1$
-	s += newLine + "startIndex = " + this.startIndex; //$NON-NLS-1$
-	return s;
+	StringBuilder s = new StringBuilder();
+	s.append(newLine);
+	s.append("--- Block Scope ---"); //$NON-NLS-1$
+	newLine.append("\t"); //$NON-NLS-1$
+	s.append(newLine);
+	s.append("locals:"); //$NON-NLS-1$
+	for (LocalVariableBinding local : this.locals) {
+		s.append(newLine);
+		s.append("\t"); //$NON-NLS-1$;
+		s.append(local.toString());
+	}
+	s.append(newLine);
+	s.append("startIndex = "); //$NON-NLS-1$
+	s.append(this.startIndex);
+	return s.toString();
 }
 
 public void reportUnusedDeclarations()
@@ -628,7 +638,6 @@ public final Binding getBinding(char[][] compoundName, InvocationSite invocation
  */
 public VariableBinding[] getEmulationPath(LocalVariableBinding outerLocalVariable) {
 	MethodScope currentMethodScope = this.methodScope();
-	SourceTypeBinding sourceType = currentMethodScope.enclosingSourceType();
 
 	// identity check
 	BlockScope variableScope = outerLocalVariable.declaringScope;
@@ -711,10 +720,13 @@ public String toString() {
 }
 
 public String toString(int tab) {
-	String s = basicToString(tab);
-	for (int i = 0; i < this.subscopeCount; i++)
-		if (this.subscopes[i] instanceof BlockScope)
-			s += ((BlockScope) this.subscopes[i]).toString(tab + 1) + "\n"; //$NON-NLS-1$
-	return s;
+	StringBuilder s = new StringBuilder(basicToString(tab));
+	for (int i = 0; i < this.subscopeCount; i++) {
+		if (this.subscopes[i] instanceof BlockScope) {
+			s.append( ((BlockScope) this.subscopes[i]).toString(tab + 1));
+			s.append("\n"); //$NON-NLS-1$
+		}
+	}
+	return s.toString();
 }
 }

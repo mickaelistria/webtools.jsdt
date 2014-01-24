@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *   Robert M. Fuhrer (rfuhrer@watson.ibm.com), IBM Corporation - initial API and implementation
+ *   Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets;
 
@@ -167,16 +168,16 @@ public class SubTypesOfSingleton extends TypeSet {
 			SubTypesSet otherSub= (SubTypesSet) other;
 			TypeSet otherUpperBounds= otherSub.upperBound();
 
-			for(Iterator iter= otherUpperBounds.iterator(); iter.hasNext(); ) {
-				TType t= (TType) iter.next();
+			for(Iterator<TType> iter= otherUpperBounds.iterator(); iter.hasNext(); ) {
+				TType t= iter.next();
 				if (! TTypes.canAssignTo(t, fUpperBound))
 					return false;
 			}
 			return true;
 		}
 		// For now, no more tricks up my sleeve; get an iterator
-		for(Iterator iter= other.iterator(); iter.hasNext(); ) {
-			TType t= (TType) iter.next();
+		for(Iterator<TType> iter= other.iterator(); iter.hasNext(); ) {
+			TType t= iter.next();
 
 			if (! TTypes.canAssignTo(t, fUpperBound))
 				return false;
@@ -257,6 +258,11 @@ public class SubTypesOfSingleton extends TypeSet {
 		SubTypesOfSingleton other= (SubTypesOfSingleton) o;
 
 		return other.fUpperBound.equals(fUpperBound);
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.fUpperBound.hashCode();
 	}
 
 	public String toString() {

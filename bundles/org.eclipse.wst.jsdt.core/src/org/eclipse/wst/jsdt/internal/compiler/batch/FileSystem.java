@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.batch;
 
@@ -71,11 +72,11 @@ public class FileSystem implements INameEnvironment, SuffixConstants {
 		 * @param classpaths the given classpath entries
 		 * @return the normalized classpath entries
 		 */
-		public static ArrayList normalize(ArrayList classpaths) {
-			ArrayList normalizedClasspath = new ArrayList();
-			HashSet cache = new HashSet();
-			for (Iterator iterator = classpaths.iterator(); iterator.hasNext(); ) {
-				FileSystem.Classpath classpath = (FileSystem.Classpath) iterator.next();
+		public static ArrayList/*<Classpath>*/ normalize(ArrayList/*<Classpath>*/ classpaths) {
+			ArrayList<Classpath> normalizedClasspath = new ArrayList<Classpath>();
+			HashSet<String> cache = new HashSet<String>();
+			for (Iterator<Classpath> iterator = ((ArrayList<Classpath>)classpaths).iterator(); iterator.hasNext(); ) {
+				FileSystem.Classpath classpath = iterator.next();
 				String path = classpath.getPath();
 				if (!cache.contains(path)) {
 					normalizedClasspath.add(classpath);
@@ -87,7 +88,7 @@ public class FileSystem implements INameEnvironment, SuffixConstants {
 	}
 
 	Classpath[] classpaths;
-	Set knownFileNames;
+	Set/*<String>*/ knownFileNames;
 
 /*
 	classPathNames is a collection is Strings representing the full path of each class path
@@ -171,13 +172,13 @@ static Classpath getClasspath(String classpathName, String encoding,
 //		else 
 			if (lowercaseClasspathName.endsWith(SUFFIX_STRING_java))
 		{
-			result=new ClasspathFile(file, encoding,accessRuleSet,destinationPath == null || destinationPath == Main.NONE ?
+			result=new ClasspathFile(file, encoding,accessRuleSet,destinationPath == null || destinationPath.equals(Main.NONE) ?
 						destinationPath : // keep == comparison valid
 						convertPathSeparators(destinationPath));
 		}
 			else if (lowercaseClasspathName.endsWith(IOAAMetaDataConstants.METADATA_FILE.toLowerCase()))
 			{
-				result=new ClasspathMetadataFile(file, encoding,accessRuleSet,destinationPath == null || destinationPath == Main.NONE ?
+				result=new ClasspathMetadataFile(file, encoding,accessRuleSet,destinationPath == null || destinationPath.equals(Main.NONE) ?
 						destinationPath : // keep == comparison valid
 						convertPathSeparators(destinationPath));
 				
@@ -187,10 +188,10 @@ static Classpath getClasspath(String classpathName, String encoding,
 }
 private void initializeKnownFileNames(String[] initialFileNames) {
 	if (initialFileNames == null) {
-		this.knownFileNames = new HashSet(0);
+		this.knownFileNames = new HashSet<String>(0);
 		return;
 	}
-	this.knownFileNames = new HashSet(initialFileNames.length * 2);
+	this.knownFileNames = new HashSet<String>(initialFileNames.length * 2);
 	for (int i = initialFileNames.length; --i >= 0;) {
 		char[] fileName = initialFileNames[i].toCharArray();
 		char[] matchingPathName = null;
@@ -235,7 +236,7 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 			: qualifiedBinaryFileName.substring(0, qualifiedTypeName.length() - typeName.length - 1);
 	String qp2 = File.separatorChar == '/' ? qualifiedPackageName : qualifiedPackageName.replace('/', File.separatorChar);
 	NameEnvironmentAnswer suggestedAnswer = null;
-	if (qualifiedPackageName == qp2) {
+	if (qualifiedPackageName.equals(qp2)) {
 		for (int i = 0, length = this.classpaths.length; i < length; i++) {
 			NameEnvironmentAnswer answer = this.classpaths[i].findClass(typeName, qualifiedPackageName, qualifiedBinaryFileName, asBinaryOnly);
 			if (answer != null) {
@@ -314,7 +315,7 @@ public char[][][] findTypeNames(char[][] packageName) {
 	if (packageName != null) {
 		String qualifiedPackageName = new String(CharOperation.concatWith(packageName, '/'));
 		String qualifiedPackageName2 = File.separatorChar == '/' ? qualifiedPackageName : qualifiedPackageName.replace('/', File.separatorChar);
-		if (qualifiedPackageName == qualifiedPackageName2) {
+		if (qualifiedPackageName.equals(qualifiedPackageName2)) {
 			for (int i = 0, length = this.classpaths.length; i < length; i++) {
 				char[][][] answers = this.classpaths[i].findTypeNames(qualifiedPackageName);
 				if (answers != null) {
@@ -368,7 +369,7 @@ public NameEnvironmentAnswer findType(char[] typeName, char[][] packageName, ITy
 public boolean isPackage(char[][] compoundName, char[] packageName) {
 	String qualifiedPackageName = new String(CharOperation.concatWith(compoundName, packageName, '/'));
 	String qp2 = File.separatorChar == '/' ? qualifiedPackageName : qualifiedPackageName.replace('/', File.separatorChar);
-	if (qualifiedPackageName == qp2) {
+	if (qualifiedPackageName.equals(qp2)) {
 		for (int i = 0, length = this.classpaths.length; i < length; i++)
 			if (this.classpaths[i].isPackage(qualifiedPackageName))
 				return true;

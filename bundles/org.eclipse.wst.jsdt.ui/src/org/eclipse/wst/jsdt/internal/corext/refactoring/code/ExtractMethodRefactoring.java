@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
 
@@ -129,7 +130,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	private int fVisibility;
 	private String fMethodName;
 	private boolean fThrowRuntimeExceptions;
-	private List fParameterInfos;
+	private List<ParameterInfo> fParameterInfos;
 	private Set fUsedNames;
 	private boolean fGenerateJavadoc;
 	private boolean fReplaceDuplicates;
@@ -143,9 +144,10 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	private static final String EMPTY= ""; //$NON-NLS-1$
 	
 	private static class UsedNamesCollector extends ASTVisitor {
-		private Set result= new HashSet();
-		private Set fIgnore= new HashSet();
-		public static Set perform(ASTNode[] nodes) {
+		// Object is one of SimpleName or String
+		private Set<Object> result= new HashSet<Object>();
+		private Set<SimpleName> fIgnore= new HashSet<SimpleName>();
+		public static Set<Object> perform(ASTNode[] nodes) {
 			UsedNamesCollector collector= new UsedNamesCollector();
 			for (int i= 0; i < nodes.length; i++) {
 				nodes[i].accept(collector);
@@ -305,7 +307,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	 * Returns the parameter infos.
 	 * @return a list of parameter infos.
 	 */
-	public List getParameterInfos() {
+	public List/*<ParameterInfo>*/ getParameterInfos() {
 		return fParameterInfos;
 	}
 	
@@ -342,11 +344,9 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	 */
 	public RefactoringStatus checkParameterNames() {
 		RefactoringStatus result= new RefactoringStatus();
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo parameter= (ParameterInfo)iter.next();
+		for (ParameterInfo parameter : fParameterInfos) {
 			result.merge(Checks.checkIdentifier(parameter.getNewName()));
-			for (Iterator others= fParameterInfos.iterator(); others.hasNext();) {
-				ParameterInfo other= (ParameterInfo) others.next();
+			for (ParameterInfo other : fParameterInfos) {
 				if (parameter != other && other.getNewName().equals(parameter.getNewName())) {
 					result.addError(Messages.format(
 						RefactoringCoreMessages.ExtractMethodRefactoring_error_sameParameter, 
@@ -368,8 +368,8 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	 * Checks if varargs are ordered correctly.
 	 */
 	public RefactoringStatus checkVarargOrder() {
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo)iter.next();
+		for (Iterator<ParameterInfo> iter= fParameterInfos.iterator(); iter.hasNext();) {
+			ParameterInfo info= iter.next();
 			if (info.isOldVarargs() && iter.hasNext()) {
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(
 					 RefactoringCoreMessages.ExtractMethodRefactoring_error_vararg_ordering,
@@ -421,7 +421,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 		fAnalyzer.aboutToCreateChange();
 		BodyDeclaration declaration= fAnalyzer.getEnclosingBodyDeclaration();
 		fRewriter= ASTRewrite.create(declaration.getAST());
-		final Map arguments= new HashMap();
+		final Map<String, String> arguments= new HashMap<String, String>();
 		String project= null;
 		IJavaScriptProject javaProject= fCUnit.getJavaScriptProject();
 		if (javaProject != null)
@@ -460,12 +460,12 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 		final JDTRefactoringDescriptor descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.EXTRACT_METHOD, project, description, comment.asString(), arguments, flags);
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fCUnit));
 		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_NAME, fMethodName);
-		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
+		arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
 //		arguments.put(ATTRIBUTE_VISIBILITY, new Integer(fVisibility).toString());
-		arguments.put(ATTRIBUTE_DESTINATION, new Integer(fDestinationIndex).toString());
+		arguments.put(ATTRIBUTE_DESTINATION, Integer.toString(fDestinationIndex));
 //		arguments.put(ATTRIBUTE_EXCEPTIONS, Boolean.valueOf(fThrowRuntimeExceptions).toString());
-		arguments.put(ATTRIBUTE_COMMENTS, Boolean.valueOf(fGenerateJavadoc).toString());
-		arguments.put(ATTRIBUTE_REPLACE, Boolean.valueOf(fReplaceDuplicates).toString());
+		arguments.put(ATTRIBUTE_COMMENTS, Boolean.toString(fGenerateJavadoc));
+		arguments.put(ATTRIBUTE_REPLACE, Boolean.toString(fReplaceDuplicates));
 		final CompilationUnitChange result= new CompilationUnitChange(RefactoringCoreMessages.ExtractMethodRefactoring_change_name, fCUnit);
 		result.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
 		result.setDescriptor(new RefactoringChangeDescriptor(descriptor));
@@ -594,7 +594,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	
 	private void initializeParameterInfos() {
 		IVariableBinding[] arguments= fAnalyzer.getArguments();
-		fParameterInfos= new ArrayList(arguments.length);
+		fParameterInfos= new ArrayList<ParameterInfo>(arguments.length);
 		ASTNode root= fAnalyzer.getEnclosingBodyDeclaration();
 		ParameterInfo vararg= null;
 		for (int i= 0; i < arguments.length; i++) {
@@ -619,8 +619,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	
 	private void initializeUsedNames() {
 		fUsedNames= UsedNamesCollector.perform(fAnalyzer.getSelectedNodes());
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo parameter= (ParameterInfo)iter.next();
+		for (ParameterInfo parameter : fParameterInfos) {
 			fUsedNames.remove(parameter.getOldName());
 		}
 	}
@@ -638,7 +637,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	}
 	
 	private void initializeDestinations() {
-		List result= new ArrayList();
+		List<ASTNode> result= new ArrayList<ASTNode>();
 		BodyDeclaration decl= fAnalyzer.getEnclosingBodyDeclaration();
 		ASTNode current= getNextParent(decl);
 		result.add(current);
@@ -652,7 +651,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 				next= getNextParent(next);
 			}
 		}
-		fDestinations= (ASTNode[])result.toArray(new ASTNode[result.size()]);
+		fDestinations= result.toArray(new ASTNode[result.size()]);
 		fDestination= fDestinations[fDestinationIndex];
 	}
 	
@@ -680,7 +679,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	//---- Code generation -----------------------------------------------------------------------
 	
 	private ASTNode[] createCallNodes(SnippetFinder.Match duplicate) {
-		List result= new ArrayList(2);
+		List<ASTNode> result= new ArrayList<ASTNode>(2);
 		
 		IVariableBinding[] locals= fAnalyzer.getCallerLocals();
 		for (int i= 0; i < locals.length; i++) {
@@ -689,9 +688,8 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 		
 		FunctionInvocation invocation= fAST.newFunctionInvocation();
 		invocation.setName(fAST.newSimpleName(fMethodName));
-		List arguments= invocation.arguments();
-		for (int i= 0; i < fParameterInfos.size(); i++) {
-			ParameterInfo parameter= ((ParameterInfo)fParameterInfos.get(i));
+		List<ASTNode> arguments= invocation.arguments();
+		for (ParameterInfo parameter : fParameterInfos) {
 			arguments.add(ASTNodeFactory.newName(fAST, getMappedName(duplicate, parameter)));
 		}		
 		
@@ -731,7 +729,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 		if (returnKind == ExtractMethodAnalyzer.RETURN_STATEMENT_VOID && !fAnalyzer.isLastStatementSelected()) {
 			result.add(fAST.newReturnStatement());
 		}
-		return (ASTNode[])result.toArray(new ASTNode[result.size()]);		
+		return result.toArray(new ASTNode[result.size()]);		
 	}
 	
 	private IVariableBinding getMappedBinding(SnippetFinder.Match duplicate, IVariableBinding org) {
@@ -779,9 +777,8 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 		result.setReturnType2((Type)ASTNode.copySubtree(fAST, fAnalyzer.getReturnType()));
 		result.setName(fAST.newSimpleName(name));
 		
-		List parameters= result.parameters();
-		for (int i= 0; i < fParameterInfos.size(); i++) {
-			ParameterInfo info= (ParameterInfo)fParameterInfos.get(i);
+		List<ASTNode> parameters= result.parameters();
+		for (ParameterInfo info : fParameterInfos) {
 			VariableDeclaration infoDecl= getVariableDeclaration(info);
 			SingleVariableDeclaration parameter= fAST.newSingleVariableDeclaration();
 			parameter.modifiers().addAll(ASTNodeFactory.newModifiers(fAST, ASTNodes.getModifiers(infoDecl)));
@@ -791,7 +788,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 			parameters.add(parameter);
 		}
 		
-		List exceptions= result.thrownExceptions();
+		List<ASTNode> exceptions= result.thrownExceptions();
 		ITypeBinding[] exceptionTypes= fAnalyzer.getExceptions(fThrowRuntimeExceptions, fAST);
 		for (int i= 0; i < exceptionTypes.length; i++) {
 			ITypeBinding exceptionType= exceptionTypes[i];
@@ -828,13 +825,11 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 			}
 		}
 
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo parameter= (ParameterInfo)iter.next();
+		for (ParameterInfo parameter : fParameterInfos) {
 			if (parameter.isRenamed()) {
-				for (int n= 0; n < selectedNodes.length; n++) {
-					SimpleName[] oldNames= LinkedNodeFinder.findByBinding(selectedNodes[n], parameter.getOldBinding());
-					for (int i= 0; i < oldNames.length; i++) {
-						fRewriter.replace(oldNames[i], fAST.newSimpleName(parameter.getNewName()), null);
+				for (ASTNode selectedNode : selectedNodes) {
+					for (SimpleName oldName : LinkedNodeFinder.findByBinding(selectedNode, parameter.getOldBinding())) {
+						fRewriter.replace(oldName, fAST.newSimpleName(parameter.getNewName()), null);
 					}
 				}
 			}
@@ -884,8 +879,7 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 	}
 	
 	private String getName(IVariableBinding binding) {
-		for (Iterator iter= fParameterInfos.iterator(); iter.hasNext();) {
-			ParameterInfo info= (ParameterInfo)iter.next();
+		for (ParameterInfo info : fParameterInfos) {
 			if (Bindings.equals(binding, info.getOldBinding())) {
 				return info.getNewName();
 			}
@@ -921,9 +915,9 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 				int length= -1;
 				final StringTokenizer tokenizer= new StringTokenizer(selection);
 				if (tokenizer.hasMoreTokens())
-					offset= Integer.valueOf(tokenizer.nextToken()).intValue();
+					offset= Integer.parseInt(tokenizer.nextToken());
 				if (tokenizer.hasMoreTokens())
-					length= Integer.valueOf(tokenizer.nextToken()).intValue();
+					length= Integer.parseInt(tokenizer.nextToken());
 				if (offset >= 0 && length >= 0) {
 					fSelectionStart= offset;
 					fSelectionLength= length;
@@ -973,17 +967,17 @@ public class ExtractMethodRefactoring extends ScriptableRefactoring {
 			}
 			final String replace= extended.getAttribute(ATTRIBUTE_REPLACE);
 			if (replace != null) {
-				fReplaceDuplicates= Boolean.valueOf(replace).booleanValue();
+				fReplaceDuplicates= Boolean.parseBoolean(replace);
 			} else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_REPLACE));
 			final String comments= extended.getAttribute(ATTRIBUTE_COMMENTS);
 			if (comments != null)
-				fGenerateJavadoc= Boolean.valueOf(comments).booleanValue();
+				fGenerateJavadoc= Boolean.parseBoolean(comments);
 			else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_COMMENTS));
 			final String exceptions= extended.getAttribute(ATTRIBUTE_EXCEPTIONS);
 			if (exceptions != null)
-				fThrowRuntimeExceptions= Boolean.valueOf(exceptions).booleanValue();
+				fThrowRuntimeExceptions= Boolean.parseBoolean(exceptions);
 			else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_EXCEPTIONS));
 		} else

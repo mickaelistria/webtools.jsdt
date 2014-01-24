@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.actions;
 
@@ -62,7 +63,7 @@ import org.eclipse.wst.jsdt.ui.actions.SelectionDispatchAction;
 
 public class CopyQualifiedNameAction extends SelectionDispatchAction {
 	
-	private static final long LABEL_FLAGS= new Long(JavaScriptElementLabels.F_FULLY_QUALIFIED | JavaScriptElementLabels.M_FULLY_QUALIFIED | JavaScriptElementLabels.I_FULLY_QUALIFIED | JavaScriptElementLabels.T_FULLY_QUALIFIED | JavaScriptElementLabels.M_PARAMETER_TYPES | JavaScriptElementLabels.USE_RESOLVED | JavaScriptElementLabels.T_TYPE_PARAMETERS | JavaScriptElementLabels.CU_QUALIFIED | JavaScriptElementLabels.CF_QUALIFIED).longValue();
+	private static final long LABEL_FLAGS= Long.valueOf(JavaScriptElementLabels.F_FULLY_QUALIFIED | JavaScriptElementLabels.M_FULLY_QUALIFIED | JavaScriptElementLabels.I_FULLY_QUALIFIED | JavaScriptElementLabels.T_FULLY_QUALIFIED | JavaScriptElementLabels.M_PARAMETER_TYPES | JavaScriptElementLabels.USE_RESOLVED | JavaScriptElementLabels.T_TYPE_PARAMETERS | JavaScriptElementLabels.CU_QUALIFIED | JavaScriptElementLabels.CF_QUALIFIED);
 
     //TODO: Make API
 	public static final String ACTION_DEFINITION_ID= "org.eclipse.wst.jsdt.ui.edit.text.java.copy.qualified.name"; //$NON-NLS-1$
@@ -203,16 +204,16 @@ public class CopyQualifiedNameAction extends SelectionDispatchAction {
     	if (!(selection instanceof IStructuredSelection))
     		return null;
     	
-    	List result= new ArrayList();
+    	List<IJavaScriptElement> result= new ArrayList<IJavaScriptElement>();
     	for (Iterator iter= ((IStructuredSelection)selection).iterator(); iter.hasNext();) {
 			Object element= iter.next();
 			if (isValideElement(element))
-				result.add(element);
+				result.add((IJavaScriptElement)element);
 		}
     	if (result.isEmpty())
     		return null;
     	
-		return (IJavaScriptElement[])result.toArray(new IJavaScriptElement[result.size()]);
+		return result.toArray(new IJavaScriptElement[result.size()]);
 	}
 
 	private IJavaScriptElement getSelectedElement(JavaEditor editor) {

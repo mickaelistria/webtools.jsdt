@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 
 package org.eclipse.wst.jsdt.internal.ui.search;
@@ -15,14 +16,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.wst.jsdt.core.IClassFile;
-import org.eclipse.wst.jsdt.core.IJavaScriptUnit;
 import org.eclipse.wst.jsdt.core.IJavaScriptElement;
+import org.eclipse.wst.jsdt.core.IJavaScriptUnit;
 import org.eclipse.wst.jsdt.core.IType;
 import org.eclipse.wst.jsdt.ui.StandardJavaScriptElementContentProvider;
 
@@ -136,10 +138,10 @@ public class LevelTreeContentProvider extends JavaSearchContentProvider implemen
 		return insertInto(parent, child, fChildrenMap);
 	}
 
-	private boolean insertInto(Object parent, Object child, Map map) {
-		Set children= (Set) map.get(parent);
+	private boolean insertInto(Object parent, Object child, Map<Object, Set<Object>> map) {
+		Set<Object> children= map.get(parent);
 		if (children == null) {
-			children= new HashSet();
+			children= new HashSet<Object>();
 			map.put(parent, children);
 		}
 		return children.add(child);
@@ -217,7 +219,7 @@ public class LevelTreeContentProvider extends JavaSearchContentProvider implemen
 
 		Set toRemove= new HashSet();
 		Set toUpdate= new HashSet();
-		Map toAdd= new HashMap();
+		Map<Object, HashSet> toAdd= new HashMap<Object, HashSet>();
 		for (int i= 0; i < updatedElements.length; i++) {
 			if (getPage().getDisplayedMatchCount(updatedElements[i]) > 0)
 				insert(toAdd, toUpdate, updatedElements[i]);
@@ -226,9 +228,9 @@ public class LevelTreeContentProvider extends JavaSearchContentProvider implemen
 		}
 		
 		viewer.remove(toRemove.toArray());
-		for (Iterator iter= toAdd.keySet().iterator(); iter.hasNext();) {
-			Object parent= iter.next();
-			HashSet children= (HashSet) toAdd.get(parent);
+		for (Entry<Object, HashSet> entry : toAdd.entrySet()) {
+			Object parent= entry.getKey();
+			HashSet children= entry.getValue();
 			viewer.add(parent, children.toArray());
 		}
 		for (Iterator elementsToUpdate= toUpdate.iterator(); elementsToUpdate.hasNext();) {

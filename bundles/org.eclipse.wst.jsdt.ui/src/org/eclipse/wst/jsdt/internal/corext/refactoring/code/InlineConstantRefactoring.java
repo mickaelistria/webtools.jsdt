@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.code;
 
@@ -179,7 +180,7 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 			private final HashSet fStaticImportsInInitializer2;
 		
 			// cache:
-			private Set fNamesDeclaredLocallyAtNewLocation;
+			private Set<String> fNamesDeclaredLocallyAtNewLocation;
 		
 			private final Expression fNewLocation;
 			private final HashSet fStaticImportsInReference;
@@ -201,10 +202,10 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 			 * @param scope not a TypeDeclaration
 			 * @return Set containing Strings representing simple names
 			 */
-			private Set getLocallyDeclaredNames(BodyDeclaration scope) {
+			private Set<String> getLocallyDeclaredNames(BodyDeclaration scope) {
 				Assert.isTrue(!(scope instanceof AbstractTypeDeclaration));
 		
-				final Set result= new HashSet();
+				final Set<String> result= new HashSet<String>();
 		
 				if (scope instanceof FieldDeclaration)
 					return result;
@@ -263,8 +264,8 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 				else
 					invocation.getExpression().accept(this);
 		
-				for (Iterator it= invocation.arguments().iterator(); it.hasNext();)
-					((Expression) it.next()).accept(this);
+				for (Iterator<Expression> it= invocation.arguments().iterator(); it.hasNext();)
+					it.next().accept(this);
 		
 				return false;
 			}
@@ -316,7 +317,7 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 				return getNamesDeclaredLocallyAtNewLocation().contains(memberName.getIdentifier());
 			}
 		
-			private Set getNamesDeclaredLocallyAtNewLocation() {
+			private Set<String> getNamesDeclaredLocallyAtNewLocation() {
 				if (fNamesDeclaredLocallyAtNewLocation != null)
 					return fNamesDeclaredLocallyAtNewLocation;
 		
@@ -730,7 +731,7 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 		pm.beginTask("", 3); //$NON-NLS-1$
 		
 		try {
-			List/*<CompilationUnitChange>*/changes= new ArrayList();
+			List<CompilationUnitChange> changes= new ArrayList<CompilationUnitChange>();
 			HashSet staticImportsInInitializer= new HashSet();
 			ImportReferencesCollector importReferencesCollector= new ImportReferencesCollector(fField.getJavaScriptProject(), null, new ArrayList(), staticImportsInInitializer);
 			getInitializer().accept(importReferencesCollector);
@@ -762,8 +763,7 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 
 			if (getRemoveDeclaration() && getReplaceAllReferences()) {
 				boolean declarationRemoved= false;
-				for (Iterator iter= changes.iterator(); iter.hasNext();) {
-					CompilationUnitChange change= (CompilationUnitChange) iter.next();
+				for (CompilationUnitChange change : changes) {
 					if (change.getCompilationUnit().equals(fDeclarationCuRewrite.getCu())) {
 						declarationRemoved= true;
 						break;
@@ -779,14 +779,14 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 
 			IJavaScriptUnit[] cus= new IJavaScriptUnit[changes.size()];
 			for (int i= 0; i < changes.size(); i++) {
-				CompilationUnitChange change= (CompilationUnitChange) changes.get(i);
+				CompilationUnitChange change= changes.get(i);
 				cus[i]= change.getCompilationUnit();
 			}
 			result.merge(Checks.validateModifiesFiles(ResourceUtil.getFiles(cus), getValidationContext()));
 
 			pm.worked(1);
 
-			fChanges= (CompilationUnitChange[]) changes.toArray(new CompilationUnitChange[changes.size()]);
+			fChanges= changes.toArray(new CompilationUnitChange[changes.size()]);
 
 			return result;
 			
@@ -835,7 +835,7 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 	public Change createChange(IProgressMonitor pm) throws CoreException {
 		try {
 			pm.beginTask(RefactoringCoreMessages.InlineConstantRefactoring_preview, 2);
-			final Map arguments= new HashMap();
+			final Map<String, String> arguments= new HashMap<String, String>();
 			String project= null;
 			IJavaScriptProject javaProject= fSelectionCu.getJavaScriptProject();
 			if (javaProject != null)
@@ -857,7 +857,7 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 				comment.addSetting(RefactoringCoreMessages.InlineConstantRefactoring_replace_references);
 			final JDTRefactoringDescriptor descriptor= new JDTRefactoringDescriptor(IJavaScriptRefactorings.INLINE_CONSTANT, project, description, comment.asString(), arguments, flags);
 			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_INPUT, descriptor.elementToHandle(fSelectionCu));
-			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, new Integer(fSelectionStart).toString() + " " + new Integer(fSelectionLength).toString()); //$NON-NLS-1$
+			arguments.put(JDTRefactoringDescriptor.ATTRIBUTE_SELECTION, Integer.toString(fSelectionStart) + " " + Integer.toString(fSelectionLength)); //$NON-NLS-1$
 			arguments.put(ATTRIBUTE_REMOVE, Boolean.valueOf(fRemoveDeclaration).toString());
 			arguments.put(ATTRIBUTE_REPLACE, Boolean.valueOf(fReplaceAllReferences).toString());
 			return new DynamicValidationRefactoringChange(descriptor, RefactoringCoreMessages.InlineConstantRefactoring_inline, fChanges);
@@ -909,9 +909,9 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 				int length= -1;
 				final StringTokenizer tokenizer= new StringTokenizer(selection);
 				if (tokenizer.hasMoreTokens())
-					offset= Integer.valueOf(tokenizer.nextToken()).intValue();
+					offset= Integer.parseInt(tokenizer.nextToken());
 				if (tokenizer.hasMoreTokens())
-					length= Integer.valueOf(tokenizer.nextToken()).intValue();
+					length= Integer.parseInt(tokenizer.nextToken());
 				if (offset >= 0 && length >= 0) {
 					fSelectionStart= offset;
 					fSelectionLength= length;
@@ -955,12 +955,12 @@ public class InlineConstantRefactoring extends ScriptableRefactoring {
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, JDTRefactoringDescriptor.ATTRIBUTE_INPUT));
 			final String replace= extended.getAttribute(ATTRIBUTE_REPLACE);
 			if (replace != null) {
-				fReplaceAllReferences= Boolean.valueOf(replace).booleanValue();
+				fReplaceAllReferences= Boolean.parseBoolean(replace);
 			} else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_REPLACE));
 			final String remove= extended.getAttribute(ATTRIBUTE_REMOVE);
 			if (remove != null)
-				fRemoveDeclaration= Boolean.valueOf(remove).booleanValue();
+				fRemoveDeclaration= Boolean.parseBoolean(remove);
 			else
 				return RefactoringStatus.createFatalErrorStatus(Messages.format(RefactoringCoreMessages.InitializableRefactoring_argument_not_exist, ATTRIBUTE_REMOVE));
 		} else

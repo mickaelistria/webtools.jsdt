@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2007 IBM Corporation and others.
+ * Copyright (c) 2006, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.util;
 
@@ -133,11 +134,13 @@ private void rehash() {
 }
 
 public String toString() {
-	String s = ""; //$NON-NLS-1$
-	char[] object;
-	for (int i = 0, l = values.length; i < l; i++)
-		if ((object = values[i]) != null)
-			s += new String(object) + "\n"; //$NON-NLS-1$
-	return s;
+	StringBuilder s = new StringBuilder();
+	for (char[] object : this.values) {
+		if (object != null) {
+			s.append(object);
+			s.append("\n"); //$NON-NLS-1$
+		}
+	}
+	return s.toString();
 }
 }

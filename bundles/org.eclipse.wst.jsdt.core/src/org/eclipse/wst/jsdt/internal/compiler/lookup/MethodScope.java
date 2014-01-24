@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.lookup;
 
@@ -408,22 +409,38 @@ public class MethodScope extends BlockScope {
 	}
 
 	String basicToString(int tab) {
+		StringBuilder newLine = new StringBuilder("\n"); //$NON-NLS-1$
+		for (int i = tab; --i >= 0;) {
+			newLine.append("\t"); //$NON-NLS-1$
+		}
 
-		String newLine = "\n"; //$NON-NLS-1$
-		for (int i = tab; --i >= 0;)
-			newLine += "\t"; //$NON-NLS-1$
-
-		String s = newLine + "--- Method Scope ---"; //$NON-NLS-1$
-		newLine += "\t"; //$NON-NLS-1$
-		s += newLine + "locals:"; //$NON-NLS-1$
-		for (int i = 0; i < localIndex; i++)
-			s += newLine + "\t" + locals[i].toString(); //$NON-NLS-1$
-		s += newLine + "startIndex = " + startIndex; //$NON-NLS-1$
-		s += newLine + "isConstructorCall = " + isConstructorCall; //$NON-NLS-1$
-		s += newLine + "initializedField = " + initializedField; //$NON-NLS-1$
-		s += newLine + "lastVisibleFieldID = " + lastVisibleFieldID; //$NON-NLS-1$
-		s += newLine + "referenceContext = " + referenceContext; //$NON-NLS-1$
-		return s;
+		StringBuilder s = new StringBuilder();
+		s.append(newLine);
+		s.append("--- Method Scope ---"); //$NON-NLS-1$
+		newLine.append("\t"); //$NON-NLS-1$
+		s.append(newLine);
+		s.append("locals:"); //$NON-NLS-1$
+		for (int i = 0; i < localIndex; i++) {
+			s.append(newLine);
+			s.append("\t"); //$NON-NLS-1$
+			s.append(this.locals[i]);
+		}
+		s.append(newLine);
+		s.append("startIndex = "); //$NON-NLS-1$
+		s.append(startIndex);
+		s.append(newLine);
+		s.append("isConstructorCall = "); //$NON-NLS-1$
+		s.append(isConstructorCall);
+		s.append(newLine);
+		s.append("initializedField = ");  //$NON-NLS-1$
+		s.append(initializedField);
+		s.append(newLine);
+		s.append("lastVisibleFieldID = "); //$NON-NLS-1$
+		s.append(lastVisibleFieldID);
+		s.append(newLine);
+		s.append("referenceContext = "); //$NON-NLS-1$
+		s.append(referenceContext);
+		return s.toString();
 	}
 
 	/**

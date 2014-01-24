@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2010 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.flow;
 
@@ -1594,29 +1595,35 @@ public String toString(){
 				+">"; //$NON-NLS-1$
 		}
 		else {
-			String def = "FlowInfo<def:[" + this.definiteInits, //$NON-NLS-1$
-				pot = "], pot:[" + this.potentialInits, //$NON-NLS-1$
-				nullS = ", null:[" + this.nullBit1 //$NON-NLS-1$
-					+ this.nullBit2 + this.nullBit3 + this.nullBit4;
+			StringBuilder def = new StringBuilder("FlowInfo<def:[").append(this.definiteInits); //$NON-NLS-1$
+			StringBuilder pot = new StringBuilder("], pot:[").append(this.potentialInits); //$NON-NLS-1$
+			StringBuilder nullS = new StringBuilder(", null:[") //$NON-NLS-1$
+				.append(this.nullBit1)
+				.append(this.nullBit2)
+				.append(this.nullBit3)
+				.append(this.nullBit4);
 			int i, ceil;
 			for (i = 0, ceil = this.extra[0].length > 3 ?
 								3 :
 								this.extra[0].length;
 				i < ceil; i++) {
-				def += "," + this.extra[0][i]; //$NON-NLS-1$
-				pot += "," + this.extra[1][i]; //$NON-NLS-1$
-				nullS += "," + this.extra[2][i] //$NON-NLS-1$
-				    + this.extra[3][i] + this.extra[4][i] + this.extra[5][i];
+				def.append(",").append(this.extra[0][i]); //$NON-NLS-1$
+				pot.append(",").append(extra[1][i]); //$NON-NLS-1$
+				nullS.append(",") //$NON-NLS-1$
+					.append(this.extra[2][i])
+					.append(this.extra[3][i])
+					.append(this.extra[4][i])
+					.append(this.extra[5][i]);
 			}
 			if (ceil < this.extra[0].length) {
-				def += ",..."; //$NON-NLS-1$
-				pot += ",..."; //$NON-NLS-1$
-				nullS += ",..."; //$NON-NLS-1$
+				def.append(",..."); //$NON-NLS-1$
+				pot.append(",..."); //$NON-NLS-1$
+				nullS.append(",..."); //$NON-NLS-1$
 			}
-			return def + pot
-				+ "], reachable:" + ((this.tagBits & UNREACHABLE) == 0) //$NON-NLS-1$
-				+ nullS
-				+ "]>"; //$NON-NLS-1$
+			def.append(pot).append("], reachable:") //$NON-NLS-1$
+				.append((this.tagBits & UNREACHABLE) == 0)
+				.append("]>"); //$NON-NLS-1$;
+			return def.toString();
 		}
 	}
 	else {
@@ -1627,23 +1634,22 @@ public String toString(){
 				+", no null info>"; //$NON-NLS-1$
 		}
 		else {
-			String def = "FlowInfo<def:[" + this.definiteInits, //$NON-NLS-1$
-				pot = "], pot:[" + this.potentialInits; //$NON-NLS-1$
+			StringBuilder def = new StringBuilder("FlowInfo<def:[").append(this.definiteInits); //$NON-NLS-1$
+			StringBuilder pot = new StringBuilder("], pot:[").append(this.potentialInits);  //$NON-NLS-1$
 			int i, ceil;
 			for (i = 0, ceil = this.extra[0].length > 3 ?
 								3 :
 								this.extra[0].length;
 				i < ceil; i++) {
-				def += "," + this.extra[0][i]; //$NON-NLS-1$
-				pot += "," + this.extra[1][i]; //$NON-NLS-1$
+				def.append(",").append(this.extra[0][i]); //$NON-NLS-1$
+				pot.append(",").append(this.extra[1][i]); //$NON-NLS-1$
 			}
 			if (ceil < this.extra[0].length) {
-				def += ",..."; //$NON-NLS-1$
-				pot += ",..."; //$NON-NLS-1$
+				def.append(",..."); //$NON-NLS-1$
+				pot.append(",..."); //$NON-NLS-1$
 			}
-			return def + pot
-				+ "], reachable:" + ((this.tagBits & UNREACHABLE) == 0) //$NON-NLS-1$
-				+ ", no null info>"; //$NON-NLS-1$
+			return def.append(pot).append("], reachable:").append( (this.tagBits & UNREACHABLE) == 0 )  //$NON-NLS-1$
+						.append(", no null info>").toString(); //$NON-NLS-1$
 		}
 	}
 }

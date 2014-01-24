@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 
 package org.eclipse.wst.jsdt.core.dom;
@@ -47,10 +48,10 @@ public class SimpleName extends Name {
 	 * or null if uninitialized.
 	 *  
 	 */
-	private static final List PROPERTY_DESCRIPTORS;
+	private static final List<StructuralPropertyDescriptor> PROPERTY_DESCRIPTORS;
 
 	static {
-		List propertyList = new ArrayList(2);
+		List<StructuralPropertyDescriptor> propertyList = new ArrayList<StructuralPropertyDescriptor>(2);
 		createPropertyList(SimpleName.class, propertyList);
 		addProperty(IDENTIFIER_PROPERTY, propertyList);
 		PROPERTY_DESCRIPTORS = reapPropertyList(propertyList);
@@ -275,7 +276,7 @@ public class SimpleName extends Name {
 	 */
 	int memSize() {
 		int size = BASE_NAME_NODE_SIZE + 2 * 4;
-		if (identifier != MISSING_IDENTIFIER) {
+		if (!MISSING_IDENTIFIER.equals(identifier)) {
 			// everything but our missing id costs
 			size += stringSize(identifier);
 		}

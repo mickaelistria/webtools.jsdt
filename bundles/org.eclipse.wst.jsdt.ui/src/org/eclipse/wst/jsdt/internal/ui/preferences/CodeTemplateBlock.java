@@ -7,7 +7,8 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
- *     John Kaplan, johnkaplantech@gmail.com - 108071 [code templates] template for body of newly created class     
+ *     John Kaplan, johnkaplantech@gmail.com - 108071 [code templates] template for body of newly created class
+ *     Mickael Istria (Red Hat Inc.) - Cleanup     
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.preferences;
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.impl;
 
@@ -218,7 +219,7 @@ public class CompilerOptions {
 	public static final long UninitializedGlobalVariable = ASTNode.Bit60L;
 
 	// Map: String optionKey --> Long irritant>
-	private static Map OptionToIrritants;
+	private static Map<String, Long> OptionToIrritants;
 
 	// Default severity level for handlers
 	public long errorThreshold = 0;
@@ -361,8 +362,8 @@ public class CompilerOptions {
 		this.parseLiteralExpressionsAsConstants = parseLiteralExpressionsAsConstants;
 	}
 
-	public Map getMap() {
-		HashMap optionsMap = new HashMap(30);
+	public Map/*<String, String>*/ getMap() {
+		HashMap<String, String> optionsMap = new HashMap<String, String>(30);
 		optionsMap.put(OPTION_SemanticValidation, this.enableSemanticValidation ? ENABLED : DISABLED);
 		optionsMap.put(OPTION_LocalVariableAttribute, (this.produceDebugAttributes & ClassFileConstants.ATTR_VARS) != 0 ? GENERATE : DO_NOT_GENERATE);
 		optionsMap.put(OPTION_LineNumberAttribute, (this.produceDebugAttributes & ClassFileConstants.ATTR_LINES) != 0 ? GENERATE : DO_NOT_GENERATE);
@@ -599,7 +600,7 @@ public class CompilerOptions {
 				irritant <<= 1;
 				String optionKey = optionKeyFromIrritant(irritant);
 				if (optionKey == null) continue;
-				OptionToIrritants.put(optionKey, new Long(irritant));
+				OptionToIrritants.put(optionKey, Long.valueOf(irritant));
 			}
 		}
 		Long irritant = (Long)OptionToIrritants.get(optionName);

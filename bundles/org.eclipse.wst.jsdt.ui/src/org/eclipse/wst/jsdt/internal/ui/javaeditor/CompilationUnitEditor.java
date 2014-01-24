@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 
 package org.eclipse.wst.jsdt.internal.ui.javaeditor;
@@ -230,7 +231,7 @@ public class CompilationUnitEditor extends JavaEditor implements IJavaReconcilin
 
 		final char fExitCharacter;
 		final char fEscapeCharacter;
-		final Stack fStack;
+		final Stack<BracketLevel> fStack;
 		final int fSize;
 
 		public ExitPolicy(char exitCharacter, char escapeCharacter, Stack stack) {
@@ -247,7 +248,7 @@ public class CompilationUnitEditor extends JavaEditor implements IJavaReconcilin
 
 			if (fSize == fStack.size() && !isMasked(offset)) {
 				if (event.character == fExitCharacter) {
-					BracketLevel level= (BracketLevel) fStack.peek();
+					BracketLevel level= fStack.peek();
 					if (level.fFirstPosition.offset > offset || level.fSecondPosition.offset < offset)
 						return null;
 					if (level.fSecondPosition.offset == offset && length == 0)
@@ -378,7 +379,7 @@ public class CompilationUnitEditor extends JavaEditor implements IJavaReconcilin
 		private boolean fCloseAngularBrackets= true;
 		private final String CATEGORY= toString();
 		private IPositionUpdater fUpdater= new ExclusivePositionUpdater(CATEGORY);
-		private Stack fBracketLevelStack= new Stack();
+		private Stack<BracketLevel> fBracketLevelStack= new Stack<BracketLevel>();
 
 		public void setCloseBracketsEnabled(boolean enabled) {
 			fCloseBrackets= enabled;
@@ -549,7 +550,7 @@ public class CompilationUnitEditor extends JavaEditor implements IJavaReconcilin
 		 */
 		public void left(LinkedModeModel environment, int flags) {
 
-			final BracketLevel level= (BracketLevel) fBracketLevelStack.pop();
+			final BracketLevel level= fBracketLevelStack.pop();
 
 			if (flags != ILinkedModeListener.EXTERNAL_MODIFICATION)
 				return;

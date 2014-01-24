@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -169,13 +170,12 @@ public IJavaScriptElement[] getChildrenForCategory(String category) throws JavaS
 		// ensure the class file's buffer is open so that categories are computed
 		((ClassFile)getClassFile()).getBuffer();
 
-		HashMap categories = mapper.categories;
+		HashMap<IJavaScriptElement, String[]> categories = mapper.categories;
 		IJavaScriptElement[] result = new IJavaScriptElement[length];
 		int index = 0;
 		if (categories != null) {
-			for (int i = 0; i < length; i++) {
-				IJavaScriptElement child = children[i];
-				String[] cats = (String[]) categories.get(child);
+			for (IJavaScriptElement child : children) {
+				String[] cats = categories.get(child);
 				if (cats != null) {
 					for (int j = 0, length2 = cats.length; j < length2; j++) {
 						if (cats[j].equals(category)) {
@@ -269,7 +269,7 @@ public IField getField(String fieldName) {
  * @see IType#getFields()
  */
 public IField[] getFields() throws JavaScriptModelException {
-	ArrayList list = getChildrenOfType(FIELD);
+	ArrayList<IField> list = getChildrenOfType(FIELD);
 	int size;
 	if ((size = list.size()) == 0) {
 		return NO_FIELDS;
@@ -331,7 +331,7 @@ public IJavaScriptElement getHandleFromMemento(String token, MementoTokenizer me
 		case JEM_METHOD:
 			if (!memento.hasMoreTokens()) return this;
 			String selector = memento.nextToken();
-			ArrayList params = new ArrayList();
+			ArrayList<String> params = new ArrayList<String>();
 			nextParam: while (memento.hasMoreTokens()) {
 				token = memento.nextToken();
 				switch (token.charAt(0)) {
@@ -419,7 +419,7 @@ public IFunction getFunction(String selector, String[] parameterTypeSignatures) 
  * @see IType#getMethods()
  */
 public IFunction[] getFunctions() throws JavaScriptModelException {
-	ArrayList list = getChildrenOfType(METHOD);
+	ArrayList<IFunction> list = getChildrenOfType(METHOD);
 	int size;
 	if ((size = list.size()) == 0) {
 		return NO_METHODS;
@@ -480,7 +480,7 @@ public String getSuperclassTypeSignature() throws JavaScriptModelException {
 		if (superclassName == null) {
 			return null;
 		}
-		return new String(Signature.createTypeSignature(ClassFile.translatedName(superclassName), true));
+		return Signature.createTypeSignature(ClassFile.translatedName(superclassName), true);
 	}
 }
 
@@ -556,7 +556,7 @@ public String getTypeQualifiedName(char enclosingTypeSeparator) {
  * @see IType#getTypes()
  */
 public IType[] getTypes() throws JavaScriptModelException {
-	ArrayList list = getChildrenOfType(TYPE);
+	ArrayList<IType> list = getChildrenOfType(TYPE);
 	int size;
 	if ((size = list.size()) == 0) {
 		return NO_TYPES;
@@ -840,7 +840,7 @@ public String getJavadocContents(IProgressMonitor monitor) throws JavaScriptMode
 	synchronized (projectInfo.javadocCache) {
 		cachedJavadoc = (String) projectInfo.javadocCache.get(this);
 	}
-	if (cachedJavadoc != null && cachedJavadoc != EMPTY_JAVADOC) {
+	if (cachedJavadoc != null && ! EMPTY_JAVADOC.equals(cachedJavadoc)) {
 		return cachedJavadoc;
 	}
 	URL baseLocation= getJavadocBaseLocation();
@@ -864,7 +864,7 @@ public String getJavadocContents(IProgressMonitor monitor) throws JavaScriptMode
 				typeName.insert(0, '.');
 			}
 		}
-		typeQualifiedName = new String(typeName.toString());
+		typeQualifiedName = typeName.toString();
 	} else {
 		typeQualifiedName = this.getElementName();
 	}

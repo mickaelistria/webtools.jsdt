@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2007 IBM Corporation and others.
+ * Copyright (c) 2000, 2013 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.util;
 
@@ -88,11 +89,16 @@ public int size() {
 	return elementSize;
 }
 public String toString() {
-	String s = ""; //$NON-NLS-1$
+	StringBuilder s = new StringBuilder();
 	Object object;
-	for (int i = 0, length = valueTable.length; i < length; i++)
-		if ((object = valueTable[i]) != null)
-			s += keyTable[i] + " -> " + object.toString() + "\n"; //$NON-NLS-2$ //$NON-NLS-1$
-	return s;
+	for (int i = 0, length = valueTable.length; i < length; i++) {
+		if ((object = valueTable[i]) != null) {
+			s.append(keyTable[i]);
+			s.append(" -> "); //$NON-NLS-1$
+			s.append(object.toString());
+			s.append("\n"); //$NON-NLS-1$
+		}
+	}
+	return s.toString();
 }
 }

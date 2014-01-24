@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.codeassist.select;
 
@@ -45,7 +46,6 @@ import org.eclipse.wst.jsdt.internal.compiler.env.ICompilationUnit;
 import org.eclipse.wst.jsdt.internal.compiler.parser.JavadocParser;
 import org.eclipse.wst.jsdt.internal.compiler.parser.RecoveredType;
 import org.eclipse.wst.jsdt.internal.compiler.problem.ProblemReporter;
-import org.eclipse.wst.jsdt.internal.compiler.util.Util;
 
 public class SelectionParser extends AssistParser {
 	// OWNER
@@ -743,18 +743,20 @@ protected void updateRecoveryState() {
 }
 
 public  String toString() {
-	String s = Util.EMPTY_STRING;
-	s = s + "elementKindStack : int[] = {"; //$NON-NLS-1$
+	StringBuilder s = new StringBuilder();
+	s.append("elementKindStack : int[] = {"); //$NON-NLS-1$
 	for (int i = 0; i <= elementPtr; i++) {
-		s = s + String.valueOf(elementKindStack[i]) + ","; //$NON-NLS-1$
+		s.append(elementKindStack[i]).append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
-	s = s + "elementInfoStack : int[] = {"; //$NON-NLS-1$
+	s.append("}\n"); //$NON-NLS-1$
+	s.append("elementInfoStack : int[] = {"); //$NON-NLS-1$
 	for (int i = 0; i <= elementPtr; i++) {
-		s = s + String.valueOf(elementInfoStack[i]) + ","; //$NON-NLS-1$
+		s.append(elementInfoStack[i]);
+		s.append(","); //$NON-NLS-1$
 	}
-	s = s + "}\n"; //$NON-NLS-1$
-	return s + super.toString();
+	s.append("}\n"); //$NON-NLS-1$
+	s.append(super.toString());
+	return s.toString();	
 }
 public int getCursorLocation() {
 	return this.selectionStart;

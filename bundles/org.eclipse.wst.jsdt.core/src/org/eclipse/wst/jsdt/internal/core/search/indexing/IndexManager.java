@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2012 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.search.indexing;
 
@@ -76,11 +77,11 @@ public class IndexManager extends JobManager implements IIndexConstants {
 	// key = indexLocation path, value = index state integer
 	private SimpleLookupTable indexStates = null;
 	private File savedIndexNamesFile = new File(getSavedIndexesDirectory(), "savedIndexNames.txt"); //$NON-NLS-1$
-	public static Integer SAVED_STATE = new Integer(0);
-	public static Integer UPDATING_STATE = new Integer(1);
-	public static Integer UNKNOWN_STATE = new Integer(2);
-	public static Integer REBUILDING_STATE = new Integer(3);
-	private static final String INDEX_FILE_SUFFIX = ".index";
+	public static Integer SAVED_STATE = Integer.valueOf(0);
+	public static Integer UPDATING_STATE = Integer.valueOf(1);
+	public static Integer UNKNOWN_STATE = Integer.valueOf(2);
+	public static Integer REBUILDING_STATE = Integer.valueOf(3);
+	private static final String INDEX_FILE_SUFFIX = ".index"; //$NON-NLS-1$
 
 
 public synchronized void aboutToUpdateIndex(IPath containerPath, Integer newIndexState) {
@@ -196,7 +197,7 @@ public void ensureIndexExists(IPath indexLocation, IPath containerPath) {
 }
 public SourceElementParser getSourceElementParser(IJavaScriptProject project, ISourceElementRequestor requestor) {
 	// disable task tags to speed up parsing
-	Map options = project.getOptions(true);
+	Map<String, String> options = (Map<String, String>)project.getOptions(true);
 	options.put(JavaScriptCore.COMPILER_TASK_TAGS, ""); //$NON-NLS-1$
 
 	SourceElementParser parser = new IndexingParser(
@@ -602,20 +603,20 @@ public synchronized void removeIndexPath(IPath path) {
  */
 public synchronized void removeIndexFamily(IPath path) {
 	// only finds cached index files... shutdown removes all non-cached index files
-	ArrayList toRemove = null;
+	ArrayList<IPath> toRemove = null;
 	Object[] containerPaths = this.indexLocations.keyTable;
 	for (int i = 0, length = containerPaths.length; i < length; i++) {
 		IPath containerPath = (IPath) containerPaths[i];
 		if (containerPath == null) continue;
 		if (path.isPrefixOf(containerPath)) {
 			if (toRemove == null)
-				toRemove = new ArrayList();
+				toRemove = new ArrayList<IPath>();
 			toRemove.add(containerPath);
 		}
 	}
 	if (toRemove != null)
 		for (int i = 0, length = toRemove.size(); i < length; i++)
-			this.removeIndex((IPath) toRemove.get(i));
+			this.removeIndex(toRemove.get(i));
 }
 /**
  * Remove the content of the given source folder from the index.
@@ -696,7 +697,7 @@ public void saveIndex(Index index) throws IOException {
  */
 public void saveIndexes() {
 	// only save cached indexes... the rest were not modified
-	ArrayList toSave = new ArrayList();
+	ArrayList<Index> toSave = new ArrayList<Index>();
 	synchronized(this) {
 		Object[] valueTable = this.indexes.valueTable;
 		for (int i = 0, l = valueTable.length; i < l; i++) {
@@ -708,7 +709,7 @@ public void saveIndexes() {
 
 	boolean allSaved = true;
 	for (int i = 0, length = toSave.size(); i < length; i++) {
-		Index index = (Index) toSave.get(i);
+		Index index = toSave.get(i);
 		ReadWriteMonitor monitor = index.monitor;
 		if (monitor == null) continue; // index got deleted since acquired
 		try {

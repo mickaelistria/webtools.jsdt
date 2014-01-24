@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2010 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     John Kaplan, johnkaplantech@gmail.com - 108071 [code templates] template for body of newly created class
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.ui.wizards;
 
@@ -338,8 +339,8 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	protected IStatus fModifierStatus;
 	protected IStatus fSuperInterfacesStatus;	
 	
-	private final int PUBLIC_INDEX= 0, DEFAULT_INDEX= 1, PRIVATE_INDEX= 2, PROTECTED_INDEX= 3;
-	private final int ABSTRACT_INDEX= 0, STATIC_INDEX= 2, ENUM_ANNOT_STATIC_INDEX= 1;
+	private static final int PUBLIC_INDEX= 0, DEFAULT_INDEX= 1, PRIVATE_INDEX= 2, PROTECTED_INDEX= 3;
+	private static final int ABSTRACT_INDEX= 0, STATIC_INDEX= 2, ENUM_ANNOT_STATIC_INDEX= 1;
 	
 	private int fTypeKind;
 	
@@ -497,8 +498,8 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	 * null</code> if no selection was available
 	 */
 	protected void initTypePage(IJavaScriptElement elem) {
-		String initSuperclass= "java.lang.Object"; //$NON-NLS-1$
-		ArrayList initSuperinterfaces= new ArrayList(5);
+		String initSuperclass= Object.class.getName();
+		ArrayList<String> initSuperinterfaces= new ArrayList<String>(5);
 
 		IJavaScriptProject project= null;
 		IPackageFragment pack= null;
@@ -1000,7 +1001,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	 */
 	protected void handleFieldChanged(String fieldName) {
 		super.handleFieldChanged(fieldName);
-		if (fieldName == CONTAINER) {
+		if (CONTAINER.equals(fieldName)) {
 			fPackageStatus= packageChanged();
 			fEnclosingTypeStatus= enclosingTypeChanged();			
 			fTypeNameStatus= typeNameChanged();
@@ -1214,11 +1215,10 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	 * @return a list of chosen super interfaces. The list's elements
 	 * are of type <code>String</code>
 	 */
-	public List getSuperInterfaces() {
-		List interfaces= fSuperInterfacesDialogField.getElements();
-		ArrayList result= new ArrayList(interfaces.size());
-		for (Iterator iter= interfaces.iterator(); iter.hasNext();) {
-			InterfaceWrapper wrapper= (InterfaceWrapper) iter.next();
+	public List<String> getSuperInterfaces() {
+		List<InterfaceWrapper> interfaces= (List<InterfaceWrapper>)fSuperInterfacesDialogField.getElements();
+		ArrayList<String> result= new ArrayList<String>(interfaces.size());
+		for (InterfaceWrapper wrapper : interfaces) {
 			result.add(wrapper.interfaceName);
 		}
 		return result;
@@ -1232,9 +1232,9 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	 * @param canBeModified if <code>true</code> the super interface field is
 	 * editable; otherwise it is read-only.
 	 */	
-	public void setSuperInterfaces(List interfacesNames, boolean canBeModified) {
-		ArrayList interfaces= new ArrayList(interfacesNames.size());
-		for (Iterator iter= interfacesNames.iterator(); iter.hasNext();) {
+	public void setSuperInterfaces(List/*<String>*/ interfacesNames, boolean canBeModified) {
+		ArrayList/*<InterfaceWrapper>*/ interfaces= new ArrayList(interfacesNames.size());
+		for (Iterator/*<String>*/ iter= interfacesNames.iterator(); iter.hasNext();) {
 			interfaces.add(new InterfaceWrapper((String) iter.next()));
 		}
 		fSuperInterfacesDialogField.setElements(interfaces);
@@ -1652,10 +1652,9 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 		fSuperInterfacesDialogField.enableButton(0, root != null);
 						
 		if (root != null) {
-			List elements= fSuperInterfacesDialogField.getElements();
-			int nElements= elements.size();
-			for (int i= 0; i < nElements; i++) {
-				String intfname= ((InterfaceWrapper) elements.get(i)).interfaceName;
+			List<InterfaceWrapper> elements= (List<InterfaceWrapper>)fSuperInterfacesDialogField.getElements();
+			for (InterfaceWrapper wrapper : elements) {
+				String intfname= wrapper.interfaceName;
 				Type type= TypeContextChecker.parseSuperInterface(intfname);
 				if (type == null) {
 					status.setError(Messages.format(NewWizardMessages.NewTypeWizardPage_error_InvalidSuperInterfaceName, intfname)); 
@@ -1843,7 +1842,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 			ImportsManager imports;
 			int indent= 0;
 
-			Set /* String (import names) */ existingImports;
+			Set<String> existingImports;
 			
 			String lineDelimiter= null;	
 			if (!isInnerClass) {
@@ -1990,16 +1989,16 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	}
 	
 	
-	private Set /* String */ getExistingImports(JavaScriptUnit root) {
-		List imports= root.imports();
-		Set res= new HashSet(imports.size());
-		for (int i= 0; i < imports.size(); i++) {
-			res.add(ASTNodes.asString((ImportDeclaration) imports.get(i)));
+	private Set<String> getExistingImports(JavaScriptUnit root) {
+		List<ImportDeclaration> imports= (List<ImportDeclaration>)root.imports();
+		Set<String> res= new HashSet<String>(imports.size());
+		for (ImportDeclaration importItem : imports) {
+			res.add(ASTNodes.asString(importItem));
 		}
 		return res;
 	}
 
-	private void removeUnusedImports(IJavaScriptUnit cu, Set existingImports, boolean needsSave) throws CoreException {
+	private void removeUnusedImports(IJavaScriptUnit cu, Set<String> existingImports, boolean needsSave) throws CoreException {
 		ASTParser parser= ASTParser.newParser(AST.JLS3);
 		parser.setSource(cu);
 		parser.setResolveBindings(true);
@@ -2009,13 +2008,13 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 			return;
 		}
 		
-		List importsDecls= root.imports();
+		List<ImportDeclaration> importsDecls= (List<ImportDeclaration>)root.imports();
 		if (importsDecls.isEmpty()) {
 			return;
 		}
 		ImportsManager imports= new ImportsManager(root);
 		
-		int importsEnd= ASTNodes.getExclusiveEnd((ASTNode) importsDecls.get(importsDecls.size() - 1));
+		int importsEnd= ASTNodes.getExclusiveEnd(importsDecls.get(importsDecls.size() - 1));
 		IProblem[] problems= root.getProblems();
 		for (int i= 0; i < problems.length; i++) {
 			IProblem curr= problems[i];
@@ -2024,7 +2023,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 				if( id == IProblem.NotVisibleType) { // not visible problems hide unused -> remove both
 					int pos= curr.getSourceStart();
 					for (int k= 0; k < importsDecls.size(); k++) {
-						ImportDeclaration decl= (ImportDeclaration) importsDecls.get(k);
+						ImportDeclaration decl= importsDecls.get(k);
 						if (decl.getStartPosition() <= pos && pos < decl.getStartPosition() + decl.getLength()) {
 							if (existingImports.isEmpty() || !existingImports.contains(ASTNodes.asString(decl))) {
 								String name= decl.getName().getFullyQualifiedName();
@@ -2116,7 +2115,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	}
 	
 	private void writeSuperInterfaces(StringBuffer buf, ImportsManager imports) {
-		List interfaces= getSuperInterfaces();
+		List<String> interfaces= getSuperInterfaces();
 		int last= interfaces.size() - 1;
 		if (last >= 0) {
 		    if (fTypeKind != INTERFACE_TYPE) {
@@ -2124,7 +2123,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 			} else {
 				buf.append(" extends "); //$NON-NLS-1$
 			}
-			String[] intfs= (String[]) interfaces.toArray(new String[interfaces.size()]);
+			String[] intfs= interfaces.toArray(new String[interfaces.size()]);
 			ITypeBinding[] bindings;
 			if (fCurrType != null) {
 				bindings= TypeContextChecker.resolveSuperInterfaces(intfs, fCurrType, getSuperInterfacesStubTypeContext());
@@ -2340,10 +2339,10 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 		final IJavaScriptUnit cu= type.getJavaScriptUnit();
 		JavaModelUtil.reconcile(cu);
 		IFunction[] typeMethods= type.getFunctions();
-		Set handleIds= new HashSet(typeMethods.length);
+		Set<String> handleIds= new HashSet<String>(typeMethods.length);
 		for (int index= 0; index < typeMethods.length; index++)
 			handleIds.add(typeMethods[index].getHandleIdentifier());
-		ArrayList newMethods= new ArrayList();
+		ArrayList<IFunction> newMethods= new ArrayList<IFunction>();
 		CodeGenerationSettings settings= JavaPreferencesSettings.getCodeGenerationSettings(type.getJavaScriptProject());
 		settings.createComments= isAddComments();
 		ASTParser parser= ASTParser.newParser(AST.JLS3);

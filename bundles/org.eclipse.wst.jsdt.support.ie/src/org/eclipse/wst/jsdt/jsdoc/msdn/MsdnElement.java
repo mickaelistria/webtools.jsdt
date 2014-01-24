@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2007 IBM Corporation and others.
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 /**
  *
@@ -164,8 +165,8 @@ public class MsdnElement extends ElementInfo{
 
 		int paramStart = i1;
 
-		ArrayList params = new ArrayList();
-		ArrayList types = new ArrayList();
+		ArrayList<String> params = new ArrayList<String>();
+		ArrayList<String> types = new ArrayList<String>();
 
 		String paramI = "<i>";
 		String paramIend = "</i>";
@@ -226,8 +227,8 @@ public class MsdnElement extends ElementInfo{
 		parsedParams = new String[params.size()][2];
 
 		for(int i = 0;i<params.size();i++) {
-			parsedParams[i][0]=(String)params.get(i);
-			parsedParams[i][1]=(String)types.get(i);
+			parsedParams[i][0] = params.get(i);
+			parsedParams[i][1] = types.get(i);
 		}
 
 		return parsedParams;
@@ -284,12 +285,12 @@ public class MsdnElement extends ElementInfo{
 
 	public String getParamString() {
 		String[][] params = getParamaters();
-		String paramString="";
+		StringBuilder paramString = new StringBuilder();
 
 		for(int i = 0;i<params.length;i++) {
-			paramString = paramString + params[i][0] + (((i+1)<params.length) ?",":"");
+			paramString.append(params[i][0]).append( (((i+1)<params.length) ?",":"") );
 		}
-		return paramString;
+		return paramString.toString();
 	}
 
 	public String getJsStructure(String parent) {
@@ -446,7 +447,7 @@ public class MsdnElement extends ElementInfo{
 
 	public ElementInfo[] getChildren() {
 		if(super.children!=null && super.children.length!=0) return super.children;
-		ArrayList children = new ArrayList();
+		ArrayList<ElementInfo> children = new ArrayList<ElementInfo>();
 
 		ElementInfo[] elemnts;
 
@@ -497,7 +498,7 @@ public class MsdnElement extends ElementInfo{
 				System.out.println("\t" + name);
 			}
 		}
-		super.children =  (ElementInfo[])children.toArray(new ElementInfo[children.size()]);
+		super.children =  children.toArray(new ElementInfo[children.size()]);
 
 
 		return super.children;
@@ -511,7 +512,7 @@ public class MsdnElement extends ElementInfo{
 	}
 
 	public ElementInfo[] getProperties() {
-		ArrayList foundProps = new ArrayList();
+		ArrayList<ElementInfo> foundProps = new ArrayList<ElementInfo>();
 		String baseUrl = getBaseUrl();
 		String pageText = getPageText();
 		String p1  = "<tr><th>Property</th><th>Description</th></tr>";
@@ -545,12 +546,12 @@ public class MsdnElement extends ElementInfo{
 			ElementInfo info = getMsdnElement(baseUrl + "/" + urlName);
 			if(!foundProps.contains(info)) foundProps.add(info);
 		}
-		return (ElementInfo[])foundProps.toArray(new ElementInfo[foundProps.size()]);
+		return foundProps.toArray(new ElementInfo[foundProps.size()]);
 	}
 
 	public ElementInfo[] getMethods() {
 
-		ArrayList foundProps = new ArrayList();
+		ArrayList<ElementInfo> foundProps = new ArrayList<ElementInfo>();
 		String baseUrl = getBaseUrl();
 		String pageText = getPageText();
 		String p1  = "<tr><th>Method</th><th>Description</th></tr>";
@@ -577,11 +578,11 @@ public class MsdnElement extends ElementInfo{
 			ElementInfo info = getMsdnElement(baseUrl + "/" + urlName);
 			if(!foundProps.contains(info)) foundProps.add(info);
 		}
-		return (ElementInfo[])foundProps.toArray(new ElementInfo[foundProps.size()]);
+		return foundProps.toArray(new ElementInfo[foundProps.size()]);
 	}
 
 	public ElementInfo[] getObjects() {
-		ArrayList foundProps = new ArrayList();
+		ArrayList<ElementInfo> foundProps = new ArrayList<ElementInfo>();
 		String baseUrl = getBaseUrl();
 		String pageText = getPageText();
 		String p1  = "<tr><th>Object</th><th>Description</th></tr>";
@@ -618,12 +619,12 @@ public class MsdnElement extends ElementInfo{
 				foundProps.add(info);
 			}
 		}
-		return (ElementInfo[])foundProps.toArray(new ElementInfo[foundProps.size()]);
+		return foundProps.toArray(new ElementInfo[foundProps.size()]);
 	}
 
 	public ElementInfo[] getEvents() {
 
-		ArrayList foundProps = new ArrayList();
+		ArrayList<ElementInfo> foundProps = new ArrayList<ElementInfo>();
 		String baseUrl = getBaseUrl();
 		String pageText = getPageText();
 		String p1  = "<tr><th>Event</th><th>Description</th></tr>";
@@ -651,12 +652,12 @@ public class MsdnElement extends ElementInfo{
 
 			if(!foundProps.contains(info)) foundProps.add(info);
 		}
-		return (ElementInfo[])foundProps.toArray(new ElementInfo[foundProps.size()]);
+		return foundProps.toArray(new ElementInfo[foundProps.size()]);
 	}
 
 	public ElementInfo[] getCollections() {
 
-		ArrayList foundProps = new ArrayList();
+		ArrayList<ElementInfo> foundProps = new ArrayList<ElementInfo>();
 		String baseUrl = getBaseUrl();
 		String pageText = getPageText();
 		String p1  = "<tr><th>Collection</th><th>Description</th></tr>";
@@ -682,7 +683,7 @@ public class MsdnElement extends ElementInfo{
 
 			if(!foundProps.contains(info)) foundProps.add(info);
 		}
-		return (ElementInfo[])foundProps.toArray(new ElementInfo[foundProps.size()]);
+		return foundProps.toArray(new ElementInfo[foundProps.size()]);
 	}
 
 	private static String getInitializer(String className) {

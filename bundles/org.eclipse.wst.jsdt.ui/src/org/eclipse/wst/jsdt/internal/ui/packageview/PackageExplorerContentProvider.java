@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.packageview;
 
@@ -23,6 +24,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -90,7 +92,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	private boolean fShowLibrariesNode;
 	private boolean fFoldPackages;
 	
-	private Collection fPendingUpdates;
+	private Collection<Runnable> fPendingUpdates;
 		
 	private UIJob fUpdateJob;
 
@@ -121,7 +123,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * Method declared on IElementChangedListener.
 	 */
 	public void elementChanged(final ElementChangedEvent event) {
-		final ArrayList runnables= new ArrayList();
+		final ArrayList<Runnable> runnables= new ArrayList<Runnable>();
 		try {
 			// 58952 delete project does not update Package Explorer [package explorer] 
 			// if the input to the viewer is deleted then refresh to avoid the display of stale elements
@@ -136,7 +138,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		}
 	}
 
-	protected final void executeRunnables(final Collection runnables) {
+	protected final void executeRunnables(final Collection/*<Runnable>*/ runnables) {
 
 		// now post all collected runnables
 		final Control ctrl= fViewer.getControl();
@@ -179,7 +181,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * Run all of the runnables that are the widget updates. Must be called in the display thread.
 	 */
 	public void runPendingUpdates() {
-		Collection pendingUpdates;
+		Collection<Runnable> pendingUpdates;
 		synchronized (this) {
 			pendingUpdates= fPendingUpdates;
 			fPendingUpdates= null;
@@ -192,15 +194,15 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		}
 	}
 	
-	private void runUpdates(Collection runnables) {
-		Iterator runnableIterator = runnables.iterator();
+	private void runUpdates(Collection<Runnable> runnables) {
+		Iterator<Runnable> runnableIterator = runnables.iterator();
 		while (runnableIterator.hasNext()){
-			((Runnable) runnableIterator.next()).run();
+			runnableIterator.next().run();
 		}
 	}
 	
 
-	private boolean inputDeleted(Collection runnables) {
+	private boolean inputDeleted(Collection<Runnable> runnables) {
 		if (fInput == null)
 			return false;
 		if ((fInput instanceof IJavaScriptElement) && ((IJavaScriptElement) fInput).exists())
@@ -233,15 +235,14 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		}
 		
 		// hierarchical package mode
-		ArrayList result= new ArrayList();
+		ArrayList<Object> result= new ArrayList<Object>();
 		getHierarchicalPackageChildren(root, null, result);
 		if (!isProjectPackageFragmentRoot(root)) {
-			Object[] nonJavaResources= root.getNonJavaScriptResources();
-			for (int i= 0; i < nonJavaResources.length; i++) {
-				result.add(nonJavaResources[i]);
+			for (Object nonJavaResource : root.getNonJavaScriptResources()) {
+				result.add(nonJavaResource);
 			}
 		}
-		return result.toArray();
+		return result.toArray(new Object[result.size()]);
 	}
 	
 	/* (non-Javadoc)
@@ -253,16 +254,16 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		}
 		
 		// hierarchical package mode
-		ArrayList result= new ArrayList();
+		ArrayList<Object> result= new ArrayList<Object>();
 		
 		getHierarchicalPackageChildren((IPackageFragmentRoot) fragment.getParent(), fragment, result);
 		Object[] nonPackages= super.getPackageContent(fragment);
 		if (result.isEmpty())
 			return nonPackages;
-		for (int i= 0; i < nonPackages.length; i++) {
-			result.add(nonPackages[i]);
+		for (Object nonPackage : nonPackages) {
+			result.add(nonPackage);
 		}
-		return result.toArray();
+		return result.toArray(new Object[result.size()]);
 	}
 	
 	/* (non-Javadoc)
@@ -274,16 +275,16 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		}
 		
 		// hierarchical package mode
-		ArrayList result= new ArrayList();
+		ArrayList<Object> result= new ArrayList<Object>();
 		
 		getHierarchicalPackagesInFolder(folder, result);
 		Object[] others= super.getFolderContent(folder);
 		if (result.isEmpty())
 			return others;
-		for (int i= 0; i < others.length; i++) {
-			result.add(others[i]);
+		for (Object other : others) {
+			result.add(other);
 		}
-		return result.toArray();
+		return result.toArray(new Object[result.size()]);
 	}
 	
 	
@@ -320,11 +321,10 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 //				return ((ProjectLibraryRoot)parentElement).getChildren();
 				// Include source folders (and also scour their model contents)
 				Object[] children1 = ((ProjectLibraryRoot) parentElement).getChildren();
-				List sourceRoots = new ArrayList();
+				List<IPackageFragmentRoot> sourceRoots = new ArrayList<IPackageFragmentRoot>();
 				try {
-					IPackageFragmentRoot[] packageFragmentRoots = ((ProjectLibraryRoot) parentElement).getProject().getPackageFragmentRoots();
-					for (int i = 0; i < packageFragmentRoots.length; i++) {
-						IIncludePathEntry entry = packageFragmentRoots[i].getRawIncludepathEntry();
+					for (IPackageFragmentRoot packageFragmentRoot : ((ProjectLibraryRoot) parentElement).getProject().getPackageFragmentRoots()) {
+						IIncludePathEntry entry = packageFragmentRoot.getRawIncludepathEntry();
 						if (IIncludePathEntry.CPE_SOURCE == entry.getEntryKind()) {
 							boolean hidden = false;
 							IIncludePathAttribute[] attribs = entry.getExtraAttributes();
@@ -332,7 +332,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 								hidden |= (attribs[k] == IIncludePathAttribute.HIDE);
 							}
 							if (!hidden) {
-								sourceRoots.add(packageFragmentRoots[i]);
+								sourceRoots.add(packageFragmentRoot);
 							}
 						}
 					}
@@ -419,25 +419,25 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		/* if the parent is a fragment root use its children
 		 * else if parent element is a script unit, use it as the child
 		 */
-		Object[] rawChildren = new Object[0];
+		IJavaScriptElement[] rawChildren = new IJavaScriptElement[0];
 		if(parentElement instanceof IPackageFragmentRoot) {
 			rawChildren = ((IParent) parentElement).getChildren();
 		} else if(parentElement instanceof IJavaScriptUnit) {
-			rawChildren = new Object[] { parentElement };
+			rawChildren = new IJavaScriptElement[] { (IJavaScriptElement)parentElement };
 		}
 		
 		if (rawChildren == null)
 			return new Object[0];
 
-		ArrayList allChildren = new ArrayList();
-		ArrayList expanded = new ArrayList();
+		ArrayList<IAdaptable> allChildren = new ArrayList<IAdaptable>();
+		ArrayList<IJavaScriptElement> expanded = new ArrayList<IJavaScriptElement>();
 		expanded.addAll(Arrays.asList(rawChildren));
 
 		if (expanded.isEmpty())
 			return new Object[0];
 
 		Object next = expanded.remove(0);
-		Map groups = new HashMap();
+		Map<String, NamespaceGroup> groups = new HashMap<String, NamespaceGroup>();
 
 		while (next != null) {
 			if (next instanceof IPackageFragment) {
@@ -448,7 +448,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 			}
 			else if (next instanceof IClassFile || next instanceof IJavaScriptUnit) {
 				IJavaScriptElement[] filtered = filter(((IParent) next).getChildren());
-				List newChildren = Arrays.asList(filtered);
+				List<IJavaScriptElement> newChildren = Arrays.asList(filtered);
 				allChildren.removeAll(newChildren);
 				if (fIsFlatLayout || neverGroup) {
 					if (onlyGroup == null) {
@@ -529,18 +529,18 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	
 	
 	private Object[] getLibraryChildren(IPackageFragmentRoot container, boolean neverGroup, NamespaceGroup onlyGroup) {		
-		Object[] children=null;
+		IAdaptable[] children=null;
 		try {
 			children = container.getChildren();
 		} catch (JavaScriptModelException ex1) {
 			ex1.printStackTrace();
 		}
 		if(children==null) return null;
-		ArrayList allChildren = new ArrayList();
+		ArrayList<IAdaptable> allChildren = new ArrayList<IAdaptable>();
 		
-		Map groups = null;
+		Map<String, NamespaceGroup> groups = null;
 		if (!fIsFlatLayout) {
-			groups = new HashMap();
+			groups = new HashMap<String, NamespaceGroup>();
 		}
 	
 		boolean unique = false;
@@ -549,13 +549,13 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 				for(int i = 0;i<children.length;i++) {
 					String display1 = ((IJavaScriptElement)children[0]).getDisplayName();
 					String display2 = ((IJavaScriptElement)children[i]).getDisplayName();
-					if(!(   (display1==display2) || (display1!=null && display1.compareTo(display2)==0))){
+					if(!(   (display1==display2) || (display1!=null && display1.equals(display2)))){
 						allChildren.addAll(Arrays.asList(children));
 						unique=true;
 						break;
 					}
 				}
-				List more = new ArrayList();
+				List<IJavaScriptElement> more = new ArrayList<IJavaScriptElement>();
 				for(int i = 0;!unique && i<children.length;i++) {
 					if(children[i] instanceof IPackageFragment) {
 						more.addAll(Arrays.asList(((IPackageFragment)children[i]).getChildren()));
@@ -563,7 +563,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 						more.addAll(Arrays.asList(((IPackageFragmentRoot)children[i]).getChildren()));
 					}else if(children[i] instanceof IClassFile || children[i] instanceof IJavaScriptUnit) {
 						IJavaScriptElement[] filtered = filter(((IParent) children[i]).getChildren());
-						List newChildren = Arrays.asList(filtered);
+						List<IJavaScriptElement> newChildren = Arrays.asList(filtered);
 						allChildren.removeAll(newChildren);
 						if (fIsFlatLayout || neverGroup) {
 							if (onlyGroup == null) {
@@ -629,7 +629,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 					}
 					
 				}
-				if(!unique) children = more.toArray();
+				if(!unique) children = more.toArray(new IJavaScriptElement[more.size()]);
 			}
 		} catch (JavaScriptModelException ex) {
 			ex.printStackTrace();
@@ -644,10 +644,10 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		if (!project.getProject().isOpen())
 			return NO_CHILDREN;
 			
-		List result= new ArrayList();
+		List<ProjectLibraryRoot> result= new ArrayList<ProjectLibraryRoot>();
 
 		boolean addJARContainer= false;
-		ArrayList projectPackageFragmentRoots  = new ArrayList();
+		ArrayList<IAdaptable> projectPackageFragmentRoots  = new ArrayList<IAdaptable>();
 		IPackageFragmentRoot[] roots= project.getPackageFragmentRoots();
 		for (int i= 0; i < roots.length; i++) {
 			IPackageFragmentRoot root= roots[i];
@@ -732,28 +732,28 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	}
 	private Object[] getContainerPackageFragmentRoots(PackageFragmentRootContainer container, boolean neverGroup, NamespaceGroup onlyGroup) {
 		
-			Object[] children = container.getChildren();
+			IAdaptable[] children = container.getChildren();
 			if (children == null)
-				return new Object[0];
+				return new IAdaptable[0];
 			for (int i = 0; i < children.length; i++) {
 				/* if one of the children is not a JS model element, or is an archive, return as-is for further navigation */
 				if (!(children[i] instanceof IJavaScriptElement) || (((IJavaScriptElement) children[i]).getElementType() == IJavaScriptElement.PACKAGE_FRAGMENT_ROOT && ((IPackageFragmentRoot) children[i]).isArchive()))
 					return children;
 			}
 			
-			ArrayList allChildren = new ArrayList();
-			ArrayList expanded = new ArrayList();
+			ArrayList<IAdaptable> allChildren = new ArrayList<IAdaptable>();
+			ArrayList<IAdaptable> expanded = new ArrayList();
 			expanded.addAll(Arrays.asList(children));
 			
 			
 			if(expanded.isEmpty()) return new Object[0];
 			
-			Map groups = null;
+			Map<String, NamespaceGroup> groups = null;
 			if (!fIsFlatLayout) {
-				groups = new HashMap();
+				groups = new HashMap<String, NamespaceGroup>();
 			}
 		
-			Object next = expanded.remove(0);
+			IAdaptable next = expanded.remove(0);
 
 			while(next!=null) {
 				try {
@@ -763,43 +763,43 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 						expanded.addAll(Arrays.asList(((IPackageFragmentRoot)next).getChildren()));
 					}else if(next instanceof IClassFile || next instanceof IJavaScriptUnit) {
 						IJavaScriptElement[] filtered = filter(((IParent) next).getChildren());
-						List newChildren = Arrays.asList(filtered);
+						List<IJavaScriptElement> newChildren = Arrays.asList(filtered);
 						allChildren.removeAll(newChildren);
 						if (fIsFlatLayout || neverGroup) {
 							if (onlyGroup == null) {
 								allChildren.addAll(newChildren);
 							}
 							else {
-								for (int j = 0; j < filtered.length; j++) {
-									switch(filtered[j].getElementType()) {
+								for (IJavaScriptElement element : filtered) {
+									switch(element.getElementType()) {
 										case IJavaScriptElement.TYPE :
 										case IJavaScriptElement.FIELD :
 										case IJavaScriptElement.METHOD :
 										case IJavaScriptElement.INITIALIZER :
 										case IJavaScriptElement.LOCAL_VARIABLE : {
-											String displayName = filtered[j].getDisplayName();
+											String displayName = element.getDisplayName();
 											int groupNamesEnd = displayName.lastIndexOf('.');
 											if (groupNamesEnd == onlyGroup.fNamePrefixLength && displayName.startsWith(onlyGroup.fNamePrefix)) {
-												allChildren.add(filtered[j]);
+												allChildren.add(element);
 											}
 											break;
 										}
 										default : {
-											allChildren.add(filtered[j]);
+											allChildren.add(element);
 										}
 									}
 								}
 							}
 						}
 						else {
-							for (int j = 0; j < filtered.length; j++) {
-								switch(filtered[j].getElementType()) {
+							for (IJavaScriptElement element : filtered) {
+								switch(element.getElementType()) {
 									case IJavaScriptElement.TYPE :
 									case IJavaScriptElement.FIELD :
 									case IJavaScriptElement.METHOD :
 									case IJavaScriptElement.INITIALIZER :
 									case IJavaScriptElement.LOCAL_VARIABLE : {
-										String displayName = filtered[j].getDisplayName();
+										String displayName = element.getDisplayName();
 										int groupEnd = displayName.lastIndexOf('.');
 										if (groupEnd > 0) {
 											String groupName = displayName.substring(0, groupEnd);
@@ -810,13 +810,13 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 											}
 										}
 										else {
-											allChildren.add(filtered[j]);
+											allChildren.add(element);
 										}
 
 										break;
 									}
 									default : {
-										allChildren.add(filtered[j]);
+										allChildren.add(element);
 									}
 								}
 							}
@@ -846,9 +846,9 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		
 		if(container!=null) {	
 			
-			Object[] children = container.getChildren();
+			IAdaptable[] children = container.getChildren();
 			if(children==null) return null;
-			ArrayList allChildren = new ArrayList();
+			ArrayList<IJavaScriptElement> allChildren = new ArrayList<IJavaScriptElement>();
 			
 			boolean unique = false;
 			
@@ -857,8 +857,8 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 					for(int i = 0;i<children.length;i++) {
 						display1 = ((IJavaScriptElement)children[0]).getDisplayName();
 						String display2 = ((IJavaScriptElement)children[i]).getDisplayName();
-						if(!(   (display1==display2) || (display1!=null && display1.compareTo(display2)==0))){
-							allChildren.addAll(Arrays.asList(children));
+						if(!( (display1==display2) || (display1!=null && display1.equals(display2)))){
+							allChildren.addAll(Arrays.asList((IJavaScriptElement[])children));
 							unique=true;
 							break;
 						}
@@ -867,7 +867,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 						ContainerFolder folder = new ContainerFolder(display1, container);
 						return new Object[] {folder};
 					}
-					ArrayList more = new ArrayList();
+					ArrayList<IJavaScriptElement> more = new ArrayList<IJavaScriptElement>();
 					for(int i = 0;!unique && i<children.length;i++) {
 					
 						try {
@@ -890,14 +890,14 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 						}
 						
 					}
-					if(!unique) children = more.toArray();
+					if(!unique) children = more.toArray(new IJavaScriptElement[more.size()]);
 				}
 		
 			
 			
-			return allChildren.toArray();
+			return allChildren.toArray(new IJavaScriptElement[allChildren.size()]);
 		}else {
-			return new Object[0];
+			return new IJavaScriptElement[0];
 		}
 	}
 
@@ -953,14 +953,13 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * @param result Collection where the resulting elements are added
 	 * @throws JavaScriptModelException
 	 */
-	private void getHierarchicalPackageChildren(IPackageFragmentRoot parent, IPackageFragment fragment, Collection result) throws JavaScriptModelException {
-		IJavaScriptElement[] children= parent.getChildren();
+	private void getHierarchicalPackageChildren(IPackageFragmentRoot parent, IPackageFragment fragment, Collection<Object> result) throws JavaScriptModelException {
+		IPackageFragment[] children= (IPackageFragment[])parent.getChildren();
 		String prefix= fragment != null ? fragment.getElementName() + '/' : ""; //$NON-NLS-1$
 		if (prefix.length()==1)
 			prefix=""; //$NON-NLS-1$
 		int prefixLen= prefix.length();
-		for (int i= 0; i < children.length; i++) {
-			IPackageFragment curr= (IPackageFragment) children[i];
+		for (IPackageFragment curr : children) {
 			if (fragment==null)
 			{
 				if (curr.isDefaultPackage()) 
@@ -986,10 +985,9 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * @param result Collection where the resulting elements are added
 	 * @throws CoreException thrown when elements could not be accessed
 	 */
-	private void getHierarchicalPackagesInFolder(IFolder folder, Collection result) throws CoreException {
+	private void getHierarchicalPackagesInFolder(IFolder folder, Collection<Object> result) throws CoreException {
 		IResource[] resources= folder.members();
-		for (int i= 0; i < resources.length; i++) {
-			IResource resource= resources[i];
+		for (IResource resource : resources) {
 			if (resource instanceof IFolder) {
 				IFolder curr= (IFolder) resource;
 				IJavaScriptElement element= JavaScriptCore.create(curr);
@@ -1081,7 +1079,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * to be processed
 	 * @throws JavaScriptModelException thrown when the access to an element failed
 	 */
-	private boolean processDelta(IJavaScriptElementDelta delta, Collection runnables) throws JavaScriptModelException {
+	private boolean processDelta(IJavaScriptElementDelta delta, Collection<Runnable> runnables) throws JavaScriptModelException {
 	
 		int kind= delta.getKind();
 		int flags= delta.getFlags();
@@ -1321,7 +1319,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * @param delta the delta to process
 	 * @param runnables the resulting view changes as runnables (type {@link Runnable})
 	 */
-	private void updateSelection(IJavaScriptElementDelta delta, Collection runnables) {
+	private void updateSelection(IJavaScriptElementDelta delta, Collection<Runnable> runnables) {
 		final IJavaScriptElement addedElement= findAddedElement(delta);
 		if (addedElement != null) {
 			final StructuredSelection selection= new StructuredSelection(addedElement);
@@ -1352,7 +1350,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * @param element the element to update
 	 * @param runnables the resulting view changes as runnables (type {@link Runnable})
 	 */
-	 private void postUpdateIcon(final IJavaScriptElement element, Collection runnables) {
+	 private void postUpdateIcon(final IJavaScriptElement element, Collection<Runnable> runnables) {
 		 runnables.add(new Runnable() {
 			public void run() {
 				// 1GF87WR: ITPUI:ALL - SWTEx + NPE closing a workbench window.
@@ -1369,7 +1367,7 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 	 * @param runnables the resulting view changes as runnables (type {@link Runnable})
 	 * @return true if the parent got refreshed
 	 */
-	private boolean processResourceDelta(IResourceDelta delta, Object parent, Collection runnables) {
+	private boolean processResourceDelta(IResourceDelta delta, Object parent, Collection<Runnable> runnables) {
 		int status= delta.getKind();
 		int flags= delta.getFlags();
 		
@@ -1440,12 +1438,12 @@ public class PackageExplorerContentProvider extends StandardJavaScriptElementCon
 		fShowLibrariesNode= state;
 	}
 	
-	private void postRefresh(Object root, int relation, Object affectedElement, Collection runnables) {
+	private void postRefresh(Object root, int relation, Object affectedElement, Collection<Runnable> runnables) {
 		// JFace doesn't refresh when object isn't part of the viewer
 		// Therefore move the refresh start down to the viewer's input
 		if (isParent(root, fInput)) 
 			root= fInput;
-		List toRefresh= new ArrayList(1);
+		List<Object> toRefresh= new ArrayList<Object>(1);
 		toRefresh.add(root);
 		augmentElementToRefresh(toRefresh, relation, affectedElement);
 		postRefresh(toRefresh, true, runnables);

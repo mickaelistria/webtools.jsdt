@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.core;
 
@@ -46,7 +47,7 @@ public class ToolFactory {
 	 * @see DefaultCodeFormatterConstants#FORMATTER_NEVER_INDENT_LINE_COMMENTS_ON_FIRST_COLUMN
 	 * @see #createCodeFormatter(Map, int)
 	 */
-	public static final int M_FORMAT_NEW = new Integer(0).intValue();
+	public static final int M_FORMAT_NEW = 0;
 
 	/**
 	 * This mode is used for formatting existing code when all formatter options should be used.
@@ -58,7 +59,7 @@ public class ToolFactory {
 	 * @see DefaultCodeFormatterConstants#FORMATTER_NEVER_INDENT_LINE_COMMENTS_ON_FIRST_COLUMN
 	 * @see #createCodeFormatter(Map, int)
 	 */
-	public static final int M_FORMAT_EXISTING = new Integer(1).intValue();
+	public static final int M_FORMAT_EXISTING = 1;
 
 	/**
 	 * Create an instance of the built-in code formatter.
@@ -103,7 +104,7 @@ public class ToolFactory {
 	 */
 	public static CodeFormatter createCodeFormatter(Map options, int mode) {
 		if (options == null) options = JavaScriptCore.getOptions();
-		Map currentOptions = new HashMap(options);
+		Map<String, String> currentOptions = new HashMap<String, String>(options);
 		if (mode == M_FORMAT_NEW) {
 			// disable the option for not indenting comments starting on first column
 			currentOptions.put(DefaultCodeFormatterConstants.FORMATTER_NEVER_INDENT_BLOCK_COMMENTS_ON_FIRST_COLUMN, DefaultCodeFormatterConstants.FALSE);

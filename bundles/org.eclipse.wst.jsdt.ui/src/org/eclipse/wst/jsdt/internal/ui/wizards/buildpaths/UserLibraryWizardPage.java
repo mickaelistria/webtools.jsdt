@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.wizards.buildpaths;
 
@@ -61,7 +62,7 @@ public class UserLibraryWizardPage extends NewElementWizardPage implements IJsGl
 	
 	private CheckedListDialogField fLibrarySelector;
 	private CPUserLibraryElement fEditResult;
-	private Set fUsedPaths;
+	private Set<IPath> fUsedPaths;
 	
 	private boolean fIsEditMode;
 	private boolean fIsExported;
@@ -71,7 +72,7 @@ public class UserLibraryWizardPage extends NewElementWizardPage implements IJsGl
 		setTitle(NewWizardMessages.UserLibraryWizardPage_title); 
 		setImageDescriptor(JavaPluginImages.DESC_WIZBAN_ADD_LIBRARY);
 		updateDescription(null);
-		fUsedPaths= new HashSet();
+		fUsedPaths= new HashSet<IPath>();
 		fProject= createPlaceholderProject();
 		
 		LibraryListAdapter adapter= new LibraryListAdapter();
@@ -86,14 +87,14 @@ public class UserLibraryWizardPage extends NewElementWizardPage implements IJsGl
 	}
     
     private static IJavaScriptProject createPlaceholderProject() {
-        String name= "####internal"; //$NON-NLS-1$
+        StringBuilder name= new StringBuilder("####internal"); //$NON-NLS-1$
         IWorkspaceRoot root= ResourcesPlugin.getWorkspace().getRoot();
         while (true) {
-            IProject project= root.getProject(name);
+            IProject project= root.getProject(name.toString());
             if (!project.exists()) {
                 return JavaScriptCore.create(project);
             }
-            name += '1';
+            name.append('1');
         }       
     }
 
@@ -105,9 +106,9 @@ public class UserLibraryWizardPage extends NewElementWizardPage implements IJsGl
 		}
 	}
 	
-	private List updateLibraryList() {
-		HashSet oldNames= new HashSet();
-		HashSet oldCheckedNames= new HashSet();
+	private List<CPUserLibraryElement> updateLibraryList() {
+		HashSet<String> oldNames= new HashSet<String>();
+		HashSet<String> oldCheckedNames= new HashSet<String>();
 		List oldElements= fLibrarySelector.getElements();
 		for (int i= 0; i < oldElements.size(); i++) {
 			CPUserLibraryElement curr= (CPUserLibraryElement) oldElements.get(i);
@@ -117,12 +118,12 @@ public class UserLibraryWizardPage extends NewElementWizardPage implements IJsGl
 			}
 		}
 
-		ArrayList entriesToCheck= new ArrayList();
+		ArrayList<CPUserLibraryElement> entriesToCheck= new ArrayList<CPUserLibraryElement>();
 		
 		String[] names= JavaScriptCore.getUserLibraryNames();
 		Arrays.sort(names, Collator.getInstance());
 
-		ArrayList elements= new ArrayList(names.length);
+		ArrayList<CPUserLibraryElement> elements= new ArrayList<CPUserLibraryElement>(names.length);
 		for (int i= 0; i < names.length; i++) {
 			String curr= names[i];
 			IPath path= new Path(JavaScriptCore.USER_LIBRARY_CONTAINER_ID).append(curr);
@@ -186,14 +187,14 @@ public class UserLibraryWizardPage extends NewElementWizardPage implements IJsGl
 	
 	private void doButtonPressed(int index) {
 		if (index == 0) {
-			HashMap data= new HashMap(3);
+			HashMap<String, String> data= new HashMap<String, String>(3);
 			if (fEditResult != null) {
 				data.put(UserLibraryPreferencePage.DATA_LIBRARY_TO_SELECT, fEditResult.getName());
 			}
 			String id= UserLibraryPreferencePage.ID;
 			PreferencesUtil.createPreferenceDialogOn(getShell(), id, new String[] { id }, data).open();
 	
-			List newEntries= updateLibraryList();
+			List<CPUserLibraryElement> newEntries= updateLibraryList();
 			if (newEntries.size() > 0) {
 				if (fIsEditMode) {
 					fLibrarySelector.setChecked(newEntries.get(0), true);

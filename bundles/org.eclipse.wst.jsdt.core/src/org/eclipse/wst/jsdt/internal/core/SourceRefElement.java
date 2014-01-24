@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -90,6 +91,12 @@ public boolean equals(Object o) {
 	return this.occurrenceCount == ((SourceRefElement)o).occurrenceCount &&
 			super.equals(o);
 }
+
+@Override
+public int hashCode() {
+	return super.hashCode() * 17 + occurrenceCount;
+}
+
 /**
  * Returns the <code>ASTNode</code> that corresponds to this <code>JavaElement</code>
  * or <code>null</code> if there is no corresponding node.

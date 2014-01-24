@@ -230,10 +230,12 @@ public IJavaScriptUnit getCompilationUnit(String cuName, String superTypeName) {
 		throw new IllegalArgumentException(Messages.convention_unit_notJavaName);
 	}
 	// If parent specified in filename remove it
-	String parentName = new String();
+	String parentName = null;
 	try {
 		IResource parentNameR = this.parent.getResource();
-		parentName = parentNameR==null?null:parentNameR.getName() + "/"; //$NON-NLS-1$
+		if (parentNameR != null) {
+			parentName = parentNameR.getName() + "/"; //$NON-NLS-1$
+		}
 		//String parentString = parentName.getProjectRelativePath().toString();
 	} catch (Exception ex) {
 

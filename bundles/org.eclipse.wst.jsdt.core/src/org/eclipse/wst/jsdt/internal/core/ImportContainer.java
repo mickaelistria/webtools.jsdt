@@ -68,7 +68,7 @@ public IImportDeclaration getImport(String importName) {
 	boolean isOnDemand = index != -1;
 	if (isOnDemand)
 		// make sure to copy the string (so that it doesn't hold on the underlying char[] that might be much bigger than necessary)
-		importName = new String(importName.substring(0, index));
+		importName = importName.substring(0, index);
 	return new ImportDeclaration(this, importName, isOnDemand);
 }
 /*

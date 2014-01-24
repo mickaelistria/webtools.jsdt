@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core;
 
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -94,7 +96,7 @@ public class UserLibrary {
 			hashCode++;
 		}
 		for (int i= 0; i < this.entries.length; i++) {
-			hashCode= hashCode * 17 + this.entries.hashCode();
+			hashCode= hashCode * 17 + Arrays.hashCode(this.entries);
 		}
 		return hashCode;
 	}
@@ -104,15 +106,16 @@ public class UserLibrary {
 		OutputStreamWriter writer = new OutputStreamWriter(s, "UTF8"); //$NON-NLS-1$
 		XMLWriter xmlWriter = new XMLWriter(writer, null/*use the workspace line delimiter*/, true/*print XML version*/);
 
-		HashMap library = new HashMap();
-		library.put(TAG_VERSION, String.valueOf(CURRENT_VERSION));
-		library.put(TAG_SYSTEMLIBRARY, String.valueOf(this.isSystemLibrary));
+		HashMap<String, String> library = new HashMap<String, String>();
+		library.put(TAG_VERSION, CURRENT_VERSION);
+		library.put(TAG_SYSTEMLIBRARY, Boolean.toString(this.isSystemLibrary));
 		xmlWriter.printTag(TAG_USERLIBRARY, library, true, true, false);
 
 		for (int i = 0; i < this.entries.length; ++i) {
 			ClasspathEntry cpEntry = (ClasspathEntry) this.entries[i];
 
-			HashMap archive = new HashMap();
+			HashMap<String, Object> archive = new HashMap<String, Object>();
+			// TODO, investingate whether this could be simply cpEntry.getPath in map
 			archive.put(TAG_PATH, cpEntry.getPath().toString());
 			IPath sourceAttach= cpEntry.getSourceAttachmentPath();
 			if (sourceAttach != null)
@@ -170,7 +173,7 @@ public class UserLibrary {
 		NodeList list= cpElement.getChildNodes();
 		int length = list.getLength();
 
-		ArrayList res= new ArrayList(length);
+		ArrayList<IIncludePathEntry> res= new ArrayList<IIncludePathEntry>(length);
 		for (int i = 0; i < length; ++i) {
 			Node node = list.item(i);
 
@@ -192,7 +195,7 @@ public class UserLibrary {
 			}
 		}
 
-		IIncludePathEntry[] entries= (IIncludePathEntry[]) res.toArray(new IIncludePathEntry[res.size()]);
+		IIncludePathEntry[] entries= res.toArray(new IIncludePathEntry[res.size()]);
 
 		return new UserLibrary(entries, isSystem);
 	}

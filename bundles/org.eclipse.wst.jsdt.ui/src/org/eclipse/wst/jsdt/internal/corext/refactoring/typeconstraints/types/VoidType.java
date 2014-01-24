@@ -30,6 +30,11 @@ public final class VoidType extends TType {
 	protected boolean doEquals(TType type) {
 		return true;
 	}
+	
+	@Override
+	public int hashCode() {
+		return getName().hashCode();
+	}
 
 	protected boolean doCanAssignTo(TType lhs) {
 		return false;

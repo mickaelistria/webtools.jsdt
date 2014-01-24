@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2012 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.search.indexing;
 
@@ -153,9 +154,9 @@ class AddJarFileToIndex extends IndexRequest {
 					SimpleLookupTable indexedFileNames = new SimpleLookupTable(max == 0 ? 33 : max + 11);
 					for (int i = 0; i < max; i++)
 						indexedFileNames.put(paths[i], DELETED);
-					for (Enumeration e = zip.entries(); e.hasMoreElements();) {
+					for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
 						// iterate each entry to index it
-						ZipEntry ze = (ZipEntry) e.nextElement();
+						ZipEntry ze = e.nextElement();
 						String zipEntryName = ze.getName();
 						if (Util.isClassFileName(zipEntryName))
 								// the class file may not be there if the package name is not valid
@@ -163,9 +164,8 @@ class AddJarFileToIndex extends IndexRequest {
 					}
 					boolean needToReindex = indexedFileNames.elementSize != max; // a new file was added
 					if (!needToReindex) {
-						Object[] valueTable = indexedFileNames.valueTable;
-						for (int i = 0, l = valueTable.length; i < l; i++) {
-							if (valueTable[i] == DELETED) {
+						for (Object value : indexedFileNames.valueTable) {
+							if (DELETED.equals(value)) {
 								needToReindex = true; // a file was deleted so re-index
 								break;
 							}
@@ -191,7 +191,7 @@ class AddJarFileToIndex extends IndexRequest {
 				}
 //				index.separator = JAR_SEPARATOR;
 				IPath indexPath = null;
-				for (Enumeration e = zip.entries(); e.hasMoreElements();) {
+				for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements();) {
 					if (this.isCancelled) {
 						if (JobManager.VERBOSE)
 							org.eclipse.wst.jsdt.internal.core.util.Util.verbose("-> indexing of " + zip.getName() + " has been cancelled"); //$NON-NLS-1$ //$NON-NLS-2$
@@ -199,7 +199,7 @@ class AddJarFileToIndex extends IndexRequest {
 					}
 
 					// iterate each entry to index it
-					ZipEntry ze = (ZipEntry) e.nextElement();
+					ZipEntry ze = e.nextElement();
 					String zipEntryName = ze.getName();
 					if (Util.isClassFileName(zipEntryName)) {
 						final byte[] classFileBytes = org.eclipse.wst.jsdt.internal.compiler.util.Util.getZipEntryByteContent(ze, zip);

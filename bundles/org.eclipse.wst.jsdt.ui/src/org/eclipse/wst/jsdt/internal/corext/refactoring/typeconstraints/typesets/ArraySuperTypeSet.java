@@ -175,6 +175,7 @@ public class ArraySuperTypeSet extends ArrayTypeSet {
 	 * @see org.eclipse.wst.jsdt.internal.corext.refactoring.typeconstraints.typesets.ArrayTypeSet#equals(java.lang.Object)
 	 */
 	public boolean equals(Object obj) {
+		if (obj == null) return false;
 		if (obj == this) return true;
 		if (obj instanceof ArraySuperTypeSet) {
 			ArraySuperTypeSet other= (ArraySuperTypeSet) obj;
@@ -182,6 +183,11 @@ public class ArraySuperTypeSet extends ArrayTypeSet {
 			return fElemTypeSet.equals(other.fElemTypeSet);
 		}
 		return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.fElemTypeSet.hashCode();
 	}
 
 	/* (non-Javadoc)

@@ -1052,4 +1052,9 @@ public abstract class AbstractJavaCompletionProposal implements IJavaCompletionP
 		return equal;
 	}
 	
+	@Override
+	public int hashCode() {
+		return this.getDisplayString().hashCode();
+	}
+	
 }

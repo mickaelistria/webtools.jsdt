@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,8 +7,11 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.env;
+
+import java.util.Arrays;
 
 import org.eclipse.wst.jsdt.core.compiler.CharOperation;
 import org.eclipse.wst.jsdt.core.compiler.IProblem;
@@ -60,6 +63,11 @@ public class AccessRuleSet {
 			if (!this.accessRules[i].equals(otherRuleSet.accessRules[i]))
 				return false;
 		return true;
+	}
+	
+	@Override
+	public int hashCode() {
+		return Arrays.deepHashCode(this.messageTemplates) ^ Arrays.deepHashCode(this.accessRules);
 	}
 
 	public AccessRule[] getAccessRules() {

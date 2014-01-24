@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2007 IBM Corporation and others.
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.corext.refactoring.structure.constraints;
 
@@ -48,7 +49,7 @@ public final class ConditionalTypeConstraint implements ITypeConstraint2 {
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	public final boolean equals(final Object object) {
-		if (object.getClass() != ConditionalTypeConstraint.class)
+		if (object == null || object.getClass() != ConditionalTypeConstraint.class)
 			return false;
 		final ITypeConstraint2 other= (ITypeConstraint2) object;
 		return getLeft() == other.getLeft() && getRight() == other.getRight();

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,13 +7,13 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.lookup;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
@@ -693,7 +693,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 	 * @see org.eclipse.wst.jsdt.internal.compiler.lookup.ReferenceBinding#fields()
 	 */
 	public FieldBinding[] fields() {
-		final Map fieldCache = new HashMap();
+		final Map<char[],  FieldBinding> fieldCache = new HashMap<char[], FieldBinding>();
 		
 		//get fields across all linked types
 		this.performActionOnLinkedBindings(new LinkedBindingAction() {
@@ -764,7 +764,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 			}
 		});
 		
-		return (FieldBinding[]) fieldCache.values().toArray(new FieldBinding[0]);
+		return fieldCache.values().toArray(new FieldBinding[fieldCache.values().size()]);
 	}
 
 	/**
@@ -869,17 +869,17 @@ public class SourceTypeBinding extends ReferenceBinding {
 		
 		//search all linked types for exact method match
 		if(selector != null) {
-			final LinkedList typesToCheck = new LinkedList();
+			final LinkedList<ReferenceBinding> typesToCheck = new LinkedList<ReferenceBinding>();
 			
 			/* this set will contain every type that has already been checked
 			 * this includes all linked types, therefore a simple contains check
 			 * can be done to see if a given type has already been checked
 			 * rather then having to iterate and do an expensive #isEquivalentTo check */
-			final Set checkedTypes = new HashSet();
+			final Set<ReferenceBinding> checkedTypes = new HashSet<ReferenceBinding>();
 			typesToCheck.add(this);
 			
 			while(!typesToCheck.isEmpty() && exactMethod == null) {
-				ReferenceBinding typeToCheck = (ReferenceBinding)typesToCheck.removeFirst();
+				ReferenceBinding typeToCheck = typesToCheck.removeFirst();
 				
 				
 				/* if type to check is SourceTypeBinding then have to check all linked bindings
@@ -917,9 +917,8 @@ public class SourceTypeBinding extends ReferenceBinding {
 								boolean alreadyGoingToCheck = false;
 								ReferenceBinding superBinding = typeToCheckLinkedBinding.getSuperBinding0();
 								if(superBinding != null) {
-									Iterator typesToCheckIter = typesToCheck.iterator();
-									while(typesToCheckIter.hasNext()) {
-										alreadyGoingToCheck = ((ReferenceBinding)typesToCheckIter.next()).isEquivalentTo(superBinding);
+									for (ReferenceBinding type : typesToCheck) {
+										alreadyGoingToCheck = type.isEquivalentTo(superBinding);
 									}
 									
 									boolean alreadyChecked = false;
@@ -957,9 +956,8 @@ public class SourceTypeBinding extends ReferenceBinding {
 						boolean alreadyGoingToCheck = false;
 						ReferenceBinding superBinding = typeToCheck.getSuperBinding();
 						if(superBinding != null) {
-							Iterator typesToCheckIter = typesToCheck.iterator();
-							while(typesToCheckIter.hasNext()) {
-								alreadyGoingToCheck = ((ReferenceBinding)typesToCheckIter.next()).isEquivalentTo(superBinding);
+							for (ReferenceBinding type : typesToCheck) {
+								alreadyGoingToCheck = type.isEquivalentTo(superBinding);
 							}
 							
 							boolean alreadyChecked = false;
@@ -1339,7 +1337,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 				}
 				
 				public Object getFinalResult() {
-					return new Boolean(this.fIsEquivalent);
+					return Boolean.valueOf(this.fIsEquivalent);
 				}
 			})).booleanValue();
 		}
@@ -1398,7 +1396,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 
 	public FieldBinding getUpdatedFieldBinding(FieldBinding targetField,
 			ReferenceBinding newDeclaringClass) {
-		Hashtable fieldMap = new Hashtable(5);
+		Hashtable<ReferenceBinding, FieldBinding> fieldMap = new Hashtable<ReferenceBinding, FieldBinding>(5);
 		FieldBinding updatedField = new FieldBinding(targetField,
 				newDeclaringClass);
 		fieldMap.put(newDeclaringClass, updatedField);
@@ -1448,7 +1446,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 			 * @see org.eclipse.wst.jsdt.internal.compiler.lookup.SourceTypeBinding.LinkedBindingAction#getFinalResult()
 			 */
 			public Object getFinalResult() {
-				return new Boolean(this.fHasMemberTypes);
+				return Boolean.valueOf(this.fHasMemberTypes);
 			}
 		});
 		
@@ -2118,7 +2116,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 			 * @see org.eclipse.wst.jsdt.internal.compiler.lookup.SourceTypeBinding.LinkedBindingAction#getFinalResult()
 			 */
 			public Object getFinalResult() {
-				return new Boolean(this.fIsBindingLinked);
+				return Boolean.valueOf(this.fIsBindingLinked);
 			}
 		});
 		
@@ -2352,13 +2350,13 @@ public class SourceTypeBinding extends ReferenceBinding {
 			 * 
 			 * use the list for quickly iterating over and the set for preventing
 			 * duplicates. */
-			final LinkedList compareAgainstSupersOfList = new LinkedList();
+			final LinkedList<ReferenceBinding> compareAgainstSupersOfList = new LinkedList<ReferenceBinding>();
 			compareAgainstSupersOfList.add(otherType);
-			final Set compareAgainstSupersOfSet = new HashSet();
+			final Set<ReferenceBinding> compareAgainstSupersOfSet = new HashSet<ReferenceBinding>();
 			compareAgainstSupersOfSet.add(otherType);
 			
 			//prevent searching the super of the same types more then once
-			final Set alreadyComparedAgainstSupersOf = new HashSet();
+			final Set<ReferenceBinding> alreadyComparedAgainstSupersOf = new HashSet<ReferenceBinding>();
 			
 			//while there are types to compare this type against their super types with keep going
 			while(!compareAgainstSupersOfList.isEmpty() && !isSuperTypeOf) {
@@ -2398,7 +2396,7 @@ public class SourceTypeBinding extends ReferenceBinding {
 					 * @see org.eclipse.wst.jsdt.internal.compiler.lookup.SourceTypeBinding.LinkedBindingAction#getFinalResult()
 					 */
 					public Object getFinalResult() {
-						return new Boolean(this.fIsSuperTypeOf);
+						return Boolean.valueOf(this.fIsSuperTypeOf);
 					}
 				})).booleanValue();
 			}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2007 IBM Corporation and others.
+ * Copyright (c) 2005, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.interpret;
 
@@ -25,7 +26,7 @@ public class StringValue extends Value {
 	}
 
 	public int numberValue() {
-		return Integer.valueOf(stringValue).intValue();
+		return Integer.parseInt(stringValue);
 	}
 
 	public String stringValue() {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2010 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.preferences;
 
@@ -21,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -221,7 +221,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 		private static final String PREF_LASTPATH= JavaScriptUI.ID_PLUGIN + ".lastuserlibrary"; //$NON-NLS-1$
 		private static final String PREF_USER_LIBRARY_LOADSAVE_SIZE= "UserLibraryLoadSaveDialog.size"; //$NON-NLS-1$
 		
-		private List fExistingLibraries;
+		private List<CPUserLibraryElement> fExistingLibraries;
 		private IDialogSettings fSettings;
 		
 		private File fLastFile;
@@ -610,7 +610,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 			}
 		}
 				
-		private static List loadLibraries(File file) throws IOException {
+		private static List<CPUserLibraryElement> loadLibraries(File file) throws IOException {
 			InputStream stream= new FileInputStream(file);
 			Element cpElement;
 			try {
@@ -633,7 +633,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 			NodeList libList= cpElement.getElementsByTagName(TAG_LIBRARY);
 			int length = libList.getLength();
 			
-			ArrayList result= new ArrayList(length);
+			ArrayList<CPUserLibraryElement> result= new ArrayList<CPUserLibraryElement>(length);
 			for (int i= 0; i < length; i++) {
 				Node lib= libList.item(i);
 				if (!(lib instanceof Element)) {
@@ -669,7 +669,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 						NodeList ruleElements= ruleParentElement.getElementsByTagName(TAG_ACCESSRULE);
 						int nRuleElements= ruleElements.getLength();
 						if (nRuleElements > 0) {
-							ArrayList resultingRules= new ArrayList(nRuleElements);
+							ArrayList<IAccessRule> resultingRules= new ArrayList<IAccessRule>(nRuleElements);
 							for (int n= 0; n < nRuleElements; n++) {
 								Node node= ruleElements.item(n);
 								if (node instanceof Element) {
@@ -740,13 +740,13 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 		fLibraryList.setLabelText(PreferencesMessages.UserLibraryPreferencePage_libraries_label);
 		
 		String[] names= JavaScriptCore.getUserLibraryNames();
-		ArrayList elements= new ArrayList();
+		ArrayList<CPUserLibraryElement> elements= new ArrayList<CPUserLibraryElement>();
 		
-		for (int i= 0; i < names.length; i++) {
-			IPath path= new Path(JavaScriptCore.USER_LIBRARY_CONTAINER_ID).append(names[i]);
+		for (String name : names) {
+			IPath path= new Path(JavaScriptCore.USER_LIBRARY_CONTAINER_ID).append(name);
 			try {
 				IJsGlobalScopeContainer container= JavaScriptCore.getJsGlobalScopeContainer(path, fDummyProject);
-				elements.add(new CPUserLibraryElement(names[i], container, fDummyProject));
+				elements.add(new CPUserLibraryElement(name, container, fDummyProject));
 			} catch (JavaScriptModelException e) {
 				JavaScriptPlugin.log(e);
 				// ignore
@@ -759,14 +759,14 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 	}
 	
 	private static IJavaScriptProject createPlaceholderProject() {
-		String name= "####jsdtinternal"; //$NON-NLS-1$
+		StringBuilder name= new StringBuilder("####jsdtinternal"); //$NON-NLS-1$
 		IWorkspaceRoot root= ResourcesPlugin.getWorkspace().getRoot();
 		while (true) {
-			IProject project= root.getProject(name);
+			IProject project= root.getProject(name.toString());
 			if (!project.exists()) {
 				return JavaScriptCore.create(project);
 			}
-			name += '1';
+			name.append('1');
 		}		
 	}
 	
@@ -866,27 +866,26 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 	
 	private void updateUserLibararies(IProgressMonitor monitor) throws CoreException {
 		List list= fLibraryList.getElements();
-		HashSet oldNames= new HashSet(Arrays.asList(JavaScriptCore.getUserLibraryNames()));
-		int nExisting= list.size();
+		HashSet<String> oldNames= new HashSet<String>(Arrays.asList(JavaScriptCore.getUserLibraryNames()));
 		
-		HashSet newEntries= new HashSet(list.size());
-		for (int i= 0; i < nExisting; i++) {
-			CPUserLibraryElement element= (CPUserLibraryElement) list.get(i);
+		HashSet<CPUserLibraryElement> newEntries= new HashSet<CPUserLibraryElement>(list.size());
+		for (Object item : list) {
+			CPUserLibraryElement element= (CPUserLibraryElement) item;
 			boolean contained= oldNames.remove(element.getName());
 			if (!contained) {
 				newEntries.add(element);
 			}
 		}	
 		
-		int len= nExisting + oldNames.size();
+		int len= list.size() + oldNames.size();
 		monitor.beginTask(PreferencesMessages.UserLibraryPreferencePage_operation, len); 
 		MultiStatus multiStatus= new MultiStatus(JavaScriptUI.ID_PLUGIN, IStatus.OK, PreferencesMessages.UserLibraryPreferencePage_operation_error, null); 
 		
 		JsGlobalScopeContainerInitializer initializer= JavaScriptCore.getJsGlobalScopeContainerInitializer(JavaScriptCore.USER_LIBRARY_CONTAINER_ID);
 		IJavaScriptProject jproject= fDummyProject;
 				
-		for (int i= 0; i < nExisting; i++) {
-			CPUserLibraryElement element= (CPUserLibraryElement) list.get(i);
+		for (Object item : list) {
+			CPUserLibraryElement element= (CPUserLibraryElement) item;
 			IPath path= element.getPath();
 			if (newEntries.contains(element) || element.hasChanges(JavaScriptCore.getJsGlobalScopeContainer(path, jproject))) {
 				IJsGlobalScopeContainer updatedContainer= element.getUpdatedContainer();
@@ -899,10 +898,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 			monitor.worked(1);
 		}
 		
-		Iterator iter= oldNames.iterator();
-		while (iter.hasNext()) {
-			String name= (String) iter.next();
-			
+		for (String name : oldNames) {
 			IPath path= new Path(JavaScriptCore.USER_LIBRARY_CONTAINER_ID).append(name);
 			try {
 				initializer.requestJsGlobalScopeContainerUpdate(path, jproject, null);
@@ -1109,7 +1105,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 		List existing= fLibraryList.getElements();
 		LoadSaveDialog dialog= new LoadSaveDialog(getShell(), false, existing, fDialogSettings);
 		if (dialog.open() == Window.OK) {
-			HashMap map= new HashMap(existing.size());
+			HashMap<String, CPUserLibraryElement> map= new HashMap<String, CPUserLibraryElement>(existing.size());
 			for (int k= 0; k < existing.size(); k++) {
 				CPUserLibraryElement elem= (CPUserLibraryElement) existing.get(k);
 				map.put(elem.getName(), elem);
@@ -1118,7 +1114,7 @@ public class UserLibraryPreferencePage extends PreferencePage implements IWorkbe
 			List list= dialog.getLoadedLibraries();
 			for (int i= 0; i < list.size(); i++) {
 				CPUserLibraryElement elem= (CPUserLibraryElement) list.get(i);
-				CPUserLibraryElement found= (CPUserLibraryElement) map.get(elem.getName());
+				CPUserLibraryElement found= map.get(elem.getName());
 				if (found == null) {
 					existing.add(elem);
 					map.put(elem.getName(), elem);

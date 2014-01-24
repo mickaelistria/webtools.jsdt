@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2007, 2010 IBM Corporation and others.
+ * Copyright (c) 2007, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  * 
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 /**
  * 
@@ -193,8 +194,8 @@ public class NamespaceGroup implements IAdaptable {
 	 */
 	protected IJavaScriptElement[] filter(IJavaScriptElement[] children) {
 		boolean initializers= false;
-		for (int i= 0; i < children.length; i++) {
-			if (matches(children[i])) {
+		for (IJavaScriptElement child : children) {
+			if (matches(child)) {
 				initializers= true;
 				break;
 			}
@@ -203,14 +204,14 @@ public class NamespaceGroup implements IAdaptable {
 		if (!initializers)
 			return children;
 
-		List v= new ArrayList();
-		for (int i= 0; i < children.length; i++) {
-			if (matches(children[i]))
+		List<IJavaScriptElement> v= new ArrayList<IJavaScriptElement>();
+		for (IJavaScriptElement child : children) {
+			if (matches(child))
 				continue;
-			v.add(children[i]);
+			v.add(child);
 		}
 
-		IJavaScriptElement[] result = (IJavaScriptElement[]) v.toArray(new IJavaScriptElement[v.size()]);
+		IJavaScriptElement[] result = v.toArray(new IJavaScriptElement[v.size()]);
 		return result;
 	}
 
@@ -243,7 +244,7 @@ public class NamespaceGroup implements IAdaptable {
 		}
 		if (children == null)
 			return null;
-		List allChildren = new ArrayList();
+		List<IJavaScriptElement> allChildren = new ArrayList<IJavaScriptElement>();
 
 		boolean unique = false;
 		try {
@@ -251,13 +252,13 @@ public class NamespaceGroup implements IAdaptable {
 				for (int i = 0; i < children.length; i++) {
 					String display1 = ((IJavaScriptElement) children[0]).getDisplayName();
 					String display2 = ((IJavaScriptElement) children[i]).getDisplayName();
-					if (!((display1 == display2) || (display1 != null && display1.compareTo(display2) == 0))) {
-						allChildren.addAll(Arrays.asList(children));
+					if (!((display1 == display2) || (display1 != null && display1.equals(display2)))) {
+						allChildren.addAll(Arrays.asList((IJavaScriptElement[])children));
 						unique = true;
 						break;
 					}
 				}
-				List more = new ArrayList();
+				List<IJavaScriptElement> more = new ArrayList<IJavaScriptElement>();
 				for (int i = 0; !unique && i < children.length; i++) {
 					if (children[i] instanceof IPackageFragment) {
 						more.addAll(Arrays.asList(((IPackageFragment) children[i]).getChildren()));
@@ -279,7 +280,7 @@ public class NamespaceGroup implements IAdaptable {
 
 				}
 				if (!unique)
-					children = more.toArray();
+					children = more.toArray(new IJavaScriptElement[more.size()]);
 			}
 		}
 		catch (JavaScriptModelException ex) {
@@ -288,7 +289,7 @@ public class NamespaceGroup implements IAdaptable {
 		}
 
 
-		return allChildren.toArray();
+		return allChildren.toArray(new IJavaScriptElement[allChildren.size()]);
 	}
 
 

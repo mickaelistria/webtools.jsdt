@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.browsing;
 
@@ -81,8 +82,8 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.texteditor.ITextEditor;
 import org.eclipse.ui.views.navigator.LocalSelectionTransfer;
 import org.eclipse.wst.jsdt.core.IClassFile;
-import org.eclipse.wst.jsdt.core.IJavaScriptUnit;
 import org.eclipse.wst.jsdt.core.IJavaScriptElement;
+import org.eclipse.wst.jsdt.core.IJavaScriptUnit;
 import org.eclipse.wst.jsdt.core.IPackageFragment;
 import org.eclipse.wst.jsdt.core.IType;
 import org.eclipse.wst.jsdt.core.JavaScriptCore;
@@ -180,7 +181,7 @@ abstract class JavaBrowsingPart extends ViewPart implements IMenuListener, ISele
 		public void partOpened(IWorkbenchPartReference ref) {
 		}
 		public void partVisible(IWorkbenchPartReference ref) {
-			if (ref != null && ref.getId() == getSite().getId()){
+			if (ref != null && ref.getId() != null && ref.getId().equals(getSite().getId())){
 				fProcessSelectionEvents= true;
 				IWorkbenchPage page= getSite().getWorkbenchWindow().getActivePage();
 				if (page != null)
@@ -188,7 +189,7 @@ abstract class JavaBrowsingPart extends ViewPart implements IMenuListener, ISele
 		}
 		}
 		public void partHidden(IWorkbenchPartReference ref) {
-			if (ref != null && ref.getId() == getSite().getId())
+			if (ref != null && ref.getId() != null && ref.getId().equals(getSite().getId()))
 				fProcessSelectionEvents= false;
 		}
 	};
@@ -268,16 +269,14 @@ abstract class JavaBrowsingPart extends ViewPart implements IMenuListener, ISele
 		IMemento childMem;
 		childMem= memento.getChild(TAG_SELECTED_ELEMENTS);
 		if (childMem != null) {
-			ArrayList list= new ArrayList();
-			IMemento[] elementMem= childMem.getChildren(TAG_SELECTED_ELEMENT);
-			for (int i= 0; i < elementMem.length; i++) {
-				String javaElementHandle= elementMem[i].getString(TAG_SELECTED_ELEMENT_PATH);
+			ArrayList<IAdaptable> list= new ArrayList<IAdaptable>();
+			for (IMemento elementMemento : childMem.getChildren(TAG_SELECTED_ELEMENT)) {
+				String javaElementHandle= elementMemento.getString(TAG_SELECTED_ELEMENT_PATH);
 				if (javaElementHandle == null) {
 					// logical package
-					IMemento[] packagesMem= elementMem[i].getChildren(TAG_LOGICAL_PACKAGE);
 					LogicalPackage lp= null;
-					for (int j= 0; j < packagesMem.length; j++) {
-						javaElementHandle= packagesMem[j].getString(TAG_SELECTED_ELEMENT_PATH);
+					for (IMemento packagementMemento : elementMemento.getChildren(TAG_LOGICAL_PACKAGE)) {
+						javaElementHandle= packagementMemento.getString(TAG_SELECTED_ELEMENT_PATH);
 						Object pack= JavaScriptCore.create(javaElementHandle);
 						if (pack instanceof IPackageFragment && ((IPackageFragment)pack).exists()) {
 							if (lp == null)

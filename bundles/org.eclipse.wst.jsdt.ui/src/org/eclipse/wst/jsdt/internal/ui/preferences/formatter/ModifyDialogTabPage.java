@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.ui.preferences.formatter;
 
@@ -330,7 +331,7 @@ public abstract class ModifyDialogTabPage {
 		 * @param text The label text for this Preference.
 		 */
 		public NumberPreference(Composite composite, int numColumns,
-							   Map preferences, String key, 
+							   Map/*<String, String>*/ preferences, String key, 
 							   int minValue, int maxValue, String text) {
 		    super(preferences, key);
 		    
@@ -464,26 +465,26 @@ public abstract class ModifyDialogTabPage {
 		
 		private final IDialogSettings fDialogSettings;
 		
-		private final Map fItemMap;
-		private final List fItemList;
+		private final Map<Control, Integer> fItemMap;
+		private final List<Control> fItemList;
 		
 		private int fIndex;
 		
 		public DefaultFocusManager() {
 			fDialogSettings= JavaScriptPlugin.getDefault().getDialogSettings();
-			fItemMap= new HashMap();
-			fItemList= new ArrayList();
+			fItemMap= new HashMap<Control, Integer>();
+			fItemList= new ArrayList<Control>();
 			fIndex= 0;
 		}
 
 		public void focusGained(FocusEvent e) {
-			fDialogSettings.put(PREF_LAST_FOCUS_INDEX, ((Integer)fItemMap.get(e.widget)).intValue());
+			fDialogSettings.put(PREF_LAST_FOCUS_INDEX, fItemMap.get(e.widget).intValue());
 		}
 		
 		public void add(Control control) {
 			control.addFocusListener(this);
 			fItemList.add(fIndex, control);
-			fItemMap.put(control, new Integer(fIndex++));
+			fItemMap.put(control, Integer.valueOf(fIndex++));
 		}
 		
 		public void add(Preference preference) {
@@ -502,7 +503,7 @@ public abstract class ModifyDialogTabPage {
 				index= fDialogSettings.getInt(PREF_LAST_FOCUS_INDEX);
 				// make sure the value is within the range
 				if ((index >= 0) && (index <= fItemList.size() - 1)) {
-					((Control)fItemList.get(index)).setFocus();
+					fItemList.get(index).setFocus();
 				}
 			} catch (NumberFormatException ex) {
 				// this is the first time
@@ -535,7 +536,7 @@ public abstract class ModifyDialogTabPage {
 	/**
 	 * The map where the current settings are stored.
 	 */
-	protected final Map fWorkingValues;
+	protected final Map/*<String, String>*/ fWorkingValues;
 	
 	/**
 	 * The modify dialog where we can display status messages.

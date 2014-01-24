@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2012 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Clean code
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.core.hierarchy;
 
@@ -100,13 +101,13 @@ public class TypeHierarchy implements ITypeHierarchy, IElementChangedListener {
 	 */
 	protected IJavaScriptUnit[] workingCopies;
 
-	protected Map classToSuperclass;
+	protected Map/*<IType, IType>*/ classToSuperclass;
 	
 	/**
 	 * <code><{@link String},{@link TypeVector}></code>
 	 */
 	protected Map typeToSubtypes;
-	protected Map typeFlags;
+	protected Map/*<IType, Integer>*/ typeFlags;
 	protected TypeVector rootClasses = new TypeVector();
 	public ArrayList missingTypes = new ArrayList(4);
 
@@ -257,7 +258,7 @@ public class TypeHierarchy implements ITypeHierarchy, IElementChangedListener {
 
 	private static Integer bytesToFlags(byte[] bytes) {
 		if (bytes != null && bytes.length > 0) {
-			return new Integer(new String(bytes));
+			return Integer.valueOf(new String(bytes));
 		}
 		else {
 			return null;
@@ -268,7 +269,7 @@ public class TypeHierarchy implements ITypeHierarchy, IElementChangedListener {
 	 * cacheFlags.
 	 */
 	public void cacheFlags(IType type, int flags) {
-		this.typeFlags.put(type, new Integer(flags));
+		this.typeFlags.put(type, Integer.valueOf(flags));
 	}
 
 	/**
@@ -964,11 +965,11 @@ public class TypeHierarchy implements ITypeHierarchy, IElementChangedListener {
 			while ((b = (byte) input.read()) != SEPARATOR1 && b != -1) {
 				bytes = readUntil(input, SEPARATOR3, 1);
 				bytes[0] = b;
-				int subClass = new Integer(new String(bytes)).intValue();
+				int subClass = Integer.parseInt(new String(bytes));
 
 				// read super type
 				bytes = readUntil(input, SEPARATOR1);
-				int superClass = new Integer(new String(bytes)).intValue();
+				int superClass = Integer.parseInt(new String(bytes));
 
 				typeHierarchy.cacheSuperclass(types[subClass], types[superClass]);
 			}
@@ -1074,27 +1075,27 @@ public class TypeHierarchy implements ITypeHierarchy, IElementChangedListener {
 	public void store(OutputStream output, IProgressMonitor monitor) throws JavaScriptModelException {
 		try {
 			// compute types in hierarchy
-			Hashtable hashtable = new Hashtable();
-			Hashtable hashtable2 = new Hashtable();
+			Hashtable<IType, Integer> hashtable = new Hashtable<IType, Integer>();
+			Hashtable<Integer, IType> hashtable2 = new Hashtable<Integer, IType>();
 			int count = 0;
 
 			if (this.focusType != null) {
-				Integer index = new Integer(count++);
+				Integer index = Integer.valueOf(count++);
 				hashtable.put(this.focusType, index);
 				hashtable2.put(index, this.focusType);
 			}
 			Object[] types = this.classToSuperclass.entrySet().toArray();
-			for (int i = 0; i < types.length; i++) {
-				Map.Entry entry = (Map.Entry) types[i];
-				Object t = entry.getKey();
+			for (Object item : this.classToSuperclass.entrySet()) {
+				Map.Entry<IType, IType> entry = (Map.Entry<IType, IType>) item;
+				IType t = entry.getKey();
 				if (hashtable.get(t) == null) {
-					Integer index = new Integer(count++);
+					Integer index = Integer.valueOf(count++);
 					hashtable.put(t, index);
 					hashtable2.put(index, t);
 				}
-				Object superClass = entry.getValue();
+				IType superClass = entry.getValue();
 				if (superClass != null && hashtable.get(superClass) == null) {
-					Integer index = new Integer(count++);
+					Integer index = Integer.valueOf(count++);
 					hashtable.put(superClass, index);
 					hashtable2.put(index, superClass);
 				}
@@ -1127,7 +1128,7 @@ public class TypeHierarchy implements ITypeHierarchy, IElementChangedListener {
 
 			// save types
 			for (int i = 0; i < count; i++) {
-				IType t = (IType) hashtable2.get(new Integer(i));
+				IType t = hashtable2.get(Integer.valueOf(i));
 
 				// n bytes
 				output.write(t.getHandleIdentifier().getBytes());

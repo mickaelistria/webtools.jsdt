@@ -122,7 +122,7 @@ public class JsNature implements IProjectNature {
 		if (monitor != null) {
 			this.monitor = monitor;
 		} else {
-			monitor = new NullProgressMonitor();
+			this.monitor = new NullProgressMonitor();
 		}
 	}
 	

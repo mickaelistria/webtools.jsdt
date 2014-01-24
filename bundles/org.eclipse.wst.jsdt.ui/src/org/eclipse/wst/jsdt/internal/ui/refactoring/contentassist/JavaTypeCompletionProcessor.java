@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2008 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 
 package org.eclipse.wst.jsdt.internal.ui.refactoring.contentassist;
@@ -86,17 +87,19 @@ public class JavaTypeCompletionProcessor extends CUPositionCompletionProcessor {
 		} else if (javaElement instanceof IType) {
 			// pattern: public class OuterType { public class Type extends /*caret*/  {} }
 			IType type= (IType) javaElement;
-			String before= "public class " + type.getElementName() + " extends "; //$NON-NLS-1$ //$NON-NLS-2$
-			String after= " {}"; //$NON-NLS-1$
+			StringBuilder before=  new StringBuilder("public class ") //$NON-NLS-1$
+				.append(type.getElementName())
+				.append(" extends "); //$NON-NLS-1$
+			StringBuilder after= new StringBuilder(" {}"); //$NON-NLS-1$
 			IJavaScriptElement parent= type.getParent();
 			while (parent instanceof IType) {
 				type= (IType) parent;
-				before+= "public class " + type.getElementName() + " {"; //$NON-NLS-1$ //$NON-NLS-2$
-				after+= "}"; //$NON-NLS-1$
+				before.append("public class ").append(type.getElementName()).append(" {"); //$NON-NLS-1$ //$NON-NLS-2$
+				after.append("}"); //$NON-NLS-1$
 				parent= type.getParent();
 			}
 			IJavaScriptUnit cu= type.getJavaScriptUnit();
-			setCompletionContext(cu, before, after);
+			setCompletionContext(cu, before.toString(), after.toString());
 		} else {
 			setCompletionContext(null, null, null);
 		}
@@ -109,7 +112,7 @@ public class JavaTypeCompletionProcessor extends CUPositionCompletionProcessor {
 	
 	protected static class TypeCompletionRequestor extends CUPositionCompletionRequestor {
 		private static final String VOID= "void"; //$NON-NLS-1$
-		private static final List BASE_TYPES= Arrays.asList(
+		private static final List<String> BASE_TYPES= Arrays.asList(
 			new String[] {"boolean", "byte", "char", "double", "float", "int", "long", "short"});  //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$
 		
 		private boolean fEnableBaseTypes;

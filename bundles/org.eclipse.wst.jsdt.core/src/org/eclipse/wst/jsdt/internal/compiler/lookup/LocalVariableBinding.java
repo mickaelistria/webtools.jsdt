@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.lookup;
 
@@ -220,29 +221,36 @@ public class LocalVariableBinding extends VariableBinding {
 		return variableDeclaration.equals(this.declaration);
 	}
 	public String toString() {
-
-		String s = super.toString();
+	
+		StringBuilder s = new StringBuilder(super.toString());
 		switch (useFlag){
 			case USED:
-				s += "[pos: " + String.valueOf(resolvedPosition) + "]"; //$NON-NLS-2$ //$NON-NLS-1$
+				s.append("[pos: "); //$NON-NLS-1$
+				s.append(String.valueOf(resolvedPosition));
+				s.append("]"); //$NON-NLS-1$
 				break;
 			case UNUSED:
-				s += "[pos: unused]"; //$NON-NLS-1$
+				s.append("[pos: unused]"); //$NON-NLS-1$
 				break;
 			case FAKE_USED:
-				s += "[pos: fake_used]"; //$NON-NLS-1$
+				s.append("[pos: fake_used]"); //$NON-NLS-1$
 				break;
 		}
-		s += "[id:" + String.valueOf(id) + "]"; //$NON-NLS-2$ //$NON-NLS-1$
+		s.append("[id:"); //$NON-NLS-1$
+		s.append(String.valueOf(id));
+		s.append("]"); //$NON-NLS-1$
 		if (initializationCount > 0) {
-			s += "[pc: "; //$NON-NLS-1$
+			s.append("[pc: "); //$NON-NLS-1$
 			for (int i = 0; i < initializationCount; i++) {
-				if (i > 0)
-					s += ", "; //$NON-NLS-1$
-				s += String.valueOf(initializationPCs[i << 1]) + "-" + ((initializationPCs[(i << 1) + 1] == -1) ? "?" : String.valueOf(initializationPCs[(i<< 1) + 1])); //$NON-NLS-2$ //$NON-NLS-1$
+				if (i > 0) {
+					s.append(", "); //$NON-NLS-1$
+				}
+				s.append(String.valueOf(initializationPCs[i << 1]));
+				s.append("-"); //$NON-NLS-1$
+				s.append( ((initializationPCs[(i << 1) + 1] == -1) ? "?" : String.valueOf(initializationPCs[(i<< 1) + 1]))); //$NON-NLS-1$
 			}
-			s += "]"; //$NON-NLS-1$
+			s.append("]"); //$NON-NLS-1$
 		}
-		return s;
+		return s.toString();
 	}
 }

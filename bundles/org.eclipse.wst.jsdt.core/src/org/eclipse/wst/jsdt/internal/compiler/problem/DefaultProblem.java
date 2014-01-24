@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2009 IBM Corporation and others.
+ * Copyright (c) 2000, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Mickael Istria (Red Hat Inc.) - Cleanup
  *******************************************************************************/
 package org.eclipse.wst.jsdt.internal.compiler.problem;
 
@@ -270,15 +271,17 @@ public void setSourceStart(int sourceStart) {
 }
 
 public String toString() {
-	String s = "Pb(" + (this.id & IProblem.IgnoreCategoriesMask) + ") "; //$NON-NLS-1$ //$NON-NLS-2$
+	StringBuilder s = new StringBuilder("Pb(").append(this.id & IProblem.IgnoreCategoriesMask).append(") "); //$NON-NLS-1$ //$NON-NLS-2$
 	if (this.message != null) {
-		s += this.message;
+		s.append(this.message);
 	} else {
-		if (this.arguments != null)
-			for (int i = 0; i < this.arguments.length; i++)
-				s += " " + this.arguments[i]; //$NON-NLS-1$
+		if (this.arguments != null) {
+			for (String arg : this.arguments) {
+				s.append(" ").append(arg); //$NON-NLS-1$
+			}
+		}
 	}
-	return s;
+	return s.toString();
 }
 
 
